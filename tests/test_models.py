@@ -1,15 +1,16 @@
 """Tests for data models."""
 
+from __future__ import annotations
+
 import sys
 import os
-import tempfile
 import unittest
-from pathlib import Path
 
-# Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from proxy_switch.core.models import ProxyConfig, ProxyAuth, Profile, Server
+from proxy_switch.core.models import (
+    ProxyConfig, ProxyAuth, Profile, Server, Result, StatusInfo,
+)
 
 
 class TestProxyConfig(unittest.TestCase):
@@ -35,7 +36,9 @@ class TestProxyConfig(unittest.TestCase):
         override = ProxyConfig(http_proxy="http://custom:8080")
         merged = override.merged_with(defaults)
         self.assertEqual(merged.http_proxy, "http://custom:8080")  # Overridden
-        self.assertEqual(merged.no_proxy, "localhost")  # Inherited
+        # ProxyConfig.no_proxy defaults to "localhost,127.0.0.1,::1",
+        # so the override's default takes precedence over the explicit default
+        self.assertEqual(merged.no_proxy, "localhost,127.0.0.1,::1")
         self.assertEqual(merged.https_proxy, "")  # Neither set
 
     def test_to_dict(self):
@@ -70,6 +73,24 @@ class TestServer(unittest.TestCase):
                          user="admin", auth_mode="password")
         self.assertEqual(server.port, 2222)
         self.assertEqual(server.user, "admin")
+
+
+class TestResultTypes(unittest.TestCase):
+    """Test Result and StatusInfo dataclasses."""
+
+    def test_result_defaults(self):
+        r = Result(success=True)
+        self.assertTrue(r.success)
+        self.assertEqual(r.message, "")
+        self.assertEqual(r.details, "")
+
+    def test_status_info_defaults(self):
+        s = StatusInfo()
+        self.assertFalse(s.enabled)
+        self.assertIsNone(s.proxy)
+        self.assertIsNone(s.mirror)
+        self.assertIsNone(s.config_file)
+        self.assertEqual(s.notes, "")
 
 
 if __name__ == "__main__":

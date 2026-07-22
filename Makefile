@@ -1,4 +1,4 @@
-.PHONY: dev build clean install uninstall test
+.PHONY: dev build clean install uninstall test lint
 
 # ── Development ─────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ install:
 run:
 	python app.py
 
-# ── Build ───────────────────────────────────────────────────────────────
+# ── Build (EXE) ─────────────────────────────────────────────────────────
 
 build:
 	pyinstaller build.spec
@@ -30,19 +30,23 @@ build:
 
 clean:
 	rm -rf build/ dist/ *.spec
-	rm -rf __pycache__ */__pycache__ */*/__pycache__
+	rm -rf __pycache__ */__pycache__ */*/__pycache__ */*/*/__pycache__
 	rm -rf .eggs *.egg-info
 	@echo "Cleaned."
 
 # ── Testing ─────────────────────────────────────────────────────────────
 
 test:
-	python -m pytest tests/ -v --tb=short || python -m unittest discover -s tests/ -v
+	python -m unittest discover -s tests/ -v
 
 lint:
 	python -m py_compile app.py
-	python -m py_compile proxy_switch/*.py
-	python -m py_compile proxy_switch/**/*.py
+	python -m py_compile proxy_switch/__init__.py
+	python -m py_compile proxy_switch/__main__.py
+	python -m py_compile proxy_switch/core/*.py
+	python -m py_compile proxy_switch/features/*.py
+	python -m py_compile proxy_switch/ssh/*.py
+	python -m py_compile proxy_switch/gui/*.py
 	@echo "Syntax check passed."
 
 # ── Installation ────────────────────────────────────────────────────────

@@ -1,33 +1,38 @@
-"""CLI entry point for local debugging and direct Ubuntu usage.
+"""CLI entry point for proxy-switch.
 
 Usage:
     python -m proxy_switch status
-    python -m proxy_switch on <profile_name>
+    python -m proxy_switch on <profile>
     python -m proxy_switch off
     python -m proxy_switch list
     python -m proxy_switch init
 """
 
+from __future__ import annotations
+
 import argparse
 import sys
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from . import __version__
-from .core.app_config import load_config, load_servers
-from .backends import get_all_backends
+from .core import config as cfg
+from .features import discover, get_all, list_names
 
 
-def cmd_list(args):
+# ── Command: list ──────────────────────────────────────────────────────────
+
+
+def cmd_list(args: argparse.Namespace) -> None:
     """List available profiles and servers."""
-    profiles = load_config()
-    servers = load_servers()
+    profiles = cfg.load_profiles()
+    servers = cfg.load_servers()
 
     print("=== Profiles ===")
     for name, profile in profiles.items():
         config = profile.config
         status = "ENABLED" if config.is_enabled else "DISABLED"
         proxy = config.primary_proxy
-        desc = f" - {profile.description}" if profile.description else ""
+        desc = f" — {profile.description}" if profile.description else ""
         print(f"  {name:15s}  [{status:8s}]  {proxy}{desc}")
 
     print("\n=== Servers ===")
@@ -37,19 +42,17 @@ def cmd_list(args):
         print(f"  {name:15s}  {server.user}@{server.host}:{server.port}")
 
 
-def cmd_init(args):
+# ── Command: init ──────────────────────────────────────────────────────────
+
+
+def cmd_init(args: argparse.Namespace) -> None:
     """Interactive setup wizard."""
-    print("proxy-switch init - Interactive Setup")
+    print("proxy-switch init — Interactive Setup")
     print("=" * 40)
-    print("\nThis will create the initial configuration.")
-    print("Config directory: ~/.proxy-switch/\n")
 
-    from .core import app_config
-    config_dir = app_config.get_config_dir()
-    config_path = app_config.get_config_path()
-
+    config_path = cfg.config_path()
     if config_path.exists():
-        resp = input("Config already exists. Overwrite? [y/N] ").strip().lower()
+        resp = input("\nConfig already exists. Overwrite? [y/N] ").strip().lower()
         if resp != "y":
             print("Cancelled.")
             return
@@ -72,7 +75,7 @@ def cmd_init(args):
         },
     }
 
-    app_config._write_toml(config_path, data)
+    cfg._write_toml(config_path, data)
     print(f"\nConfig written to: {config_path}")
 
     add_server = input("\nAdd a server now? [y/N] ").strip().lower()
@@ -97,22 +100,22 @@ def cmd_init(args):
             "auth_mode": auth_mode,
             "ssh_key": ssh_key,
             "password": password,
-            "description": name,
         }
-        servers_path = app_config.get_servers_path()
-        app_config._write_toml(servers_path, {f"server:{name}": server_data})
+        cfg._write_toml(cfg.servers_path(), {f"server:{name}": server_data})
         print(f"Server '{name}' added.")
 
     print("\nDone! Use 'python -m proxy_switch list' to see your config.")
     print("Use 'python -m proxy_switch on <profile>' to apply proxy.")
 
 
-def cmd_on(args):
-    """Enable proxy using a named profile."""
-    profiles = load_config()
+# ── Command: on ────────────────────────────────────────────────────────────
+
+
+def cmd_on(args: argparse.Namespace) -> None:
+    """Enable proxy using a named profile on the local system."""
+    profiles = cfg.load_profiles()
     profile_name = args.profile or "default"
 
-    # Fallback: use first non-direct profile if "default" not found
     if profile_name == "default" and "default" not in profiles:
         available = [n for n in profiles if n != "direct"]
         if available:
@@ -134,10 +137,10 @@ def cmd_on(args):
         print(f"Profile '{profile_name}' has no proxy configured. Use 'proxy-switch off' instead.")
         sys.exit(1)
 
-    backends = get_all_backends()
+    features = get_all()
     if args.only:
-        filter_list = [b.strip() for b in args.only.split(",")]
-        backends = {n: b for n, b in backends.items() if n in filter_list}
+        only_list = [b.strip() for b in args.only.split(",")]
+        features = {n: m for n, m in features.items() if n in only_list}
 
     print(f"Applying profile '{profile_name}'...")
     print(f"  Proxy: {config.primary_proxy}")
@@ -145,77 +148,75 @@ def cmd_on(args):
         print(f"  No-Proxy: {config.no_proxy}")
     print()
 
-    success_count = 0
-    fail_count = 0
-    skip_count = 0
-
-    for bname, bcls in backends.items():
+    success = fail = skip = 0
+    for fname, mod in sorted(features.items()):
         try:
-            backend = bcls()
-            if not backend.can_apply():
-                print(f"  ⏭  {bname:15s}  skipped (not installed)")
-                skip_count += 1
+            if not mod.detect():
+                print(f"  ⏭  {fname:15s}  skipped (not installed)")
+                skip += 1
                 continue
 
-            result = backend.enable(proxy_dict)
-            if result.get("success"):
-                print(f"  ✓  {bname:15s}  enabled")
-                success_count += 1
+            result = mod.enable(proxy_dict)
+            if result.success:
+                print(f"  ✓  {fname:15s}  enabled")
+                success += 1
             else:
-                print(f"  ✗  {bname:15s}  failed: {result.get('message', '')}")
-                fail_count += 1
+                print(f"  ✗  {fname:15s}  failed: {result.message}")
+                fail += 1
         except Exception as e:
-            print(f"  ✗  {bname:15s}  error: {e}")
-            fail_count += 1
+            print(f"  ✗  {fname:15s}  error: {e}")
+            fail += 1
 
-    print(f"\nDone: {success_count} enabled, {fail_count} failed, {skip_count} skipped.")
+    print(f"\nDone: {success} enabled, {fail} failed, {skip} skipped.")
 
 
-def cmd_off(args):
-    """Disable all proxies."""
-    backends = get_all_backends()
+# ── Command: off ───────────────────────────────────────────────────────────
+
+
+def cmd_off(args: argparse.Namespace) -> None:
+    """Disable all proxies on the local system."""
+    features = get_all()
     if args.only:
-        filter_list = [b.strip() for b in args.only.split(",")]
-        backends = {n: b for n, b in backends.items() if n in filter_list}
+        only_list = [b.strip() for b in args.only.split(",")]
+        features = {n: m for n, m in features.items() if n in only_list}
 
     print("Disabling proxy for all tools...")
 
-    success_count = 0
-    fail_count = 0
-    skip_count = 0
-
-    for bname, bcls in backends.items():
+    success = fail = skip = 0
+    for fname, mod in sorted(features.items()):
         try:
-            backend = bcls()
-            if not backend.can_apply():
-                print(f"  ⏭  {bname:15s}  skipped (not installed)")
-                skip_count += 1
+            if not mod.detect():
+                print(f"  ⏭  {fname:15s}  skipped (not installed)")
+                skip += 1
                 continue
 
-            result = backend.disable()
-            if result.get("success"):
-                print(f"  ✓  {bname:15s}  disabled")
-                success_count += 1
+            result = mod.disable()
+            if result.success:
+                print(f"  ✓  {fname:15s}  disabled")
+                success += 1
             else:
-                print(f"  ✗  {bname:15s}  failed: {result.get('message', '')}")
-                fail_count += 1
+                print(f"  ✗  {fname:15s}  failed: {result.message}")
+                fail += 1
         except Exception as e:
-            print(f"  ✗  {bname:15s}  error: {e}")
-            fail_count += 1
+            print(f"  ✗  {fname:15s}  error: {e}")
+            fail += 1
 
-    print(f"\nDone: {success_count} disabled, {fail_count} failed, {skip_count} skipped.")
+    print(f"\nDone: {success} disabled, {fail} failed, {skip} skipped.")
 
 
-def cmd_status(args):
-    """Show proxy status for all tools."""
-    backends = get_all_backends()
+# ── Command: status ────────────────────────────────────────────────────────
+
+
+def cmd_status(args: argparse.Namespace) -> None:
+    """Show proxy status for all tools on the local system."""
+    features = get_all()
 
     print("Proxy Status")
     print("=" * 60)
     print()
 
     if args.profile:
-        profiles = load_config()
+        profiles = cfg.load_profiles()
         if args.profile in profiles:
             config = profiles[args.profile].config
             print(f"Profile: {args.profile}")
@@ -227,23 +228,26 @@ def cmd_status(args):
         else:
             print(f"Profile '{args.profile}' not found.\n")
 
-    print(f"{'Tool':15s}  {'Status':10s}  {'Proxy'}")
+    print(f"{'Feature':15s}  {'Status':12s}  Proxy")
     print("-" * 60)
-    for bname, bcls in backends.items():
+    for fname, mod in sorted(features.items()):
         try:
-            backend = bcls()
-            if not backend.can_apply():
-                print(f"{bname:15s}  {'NOT INSTALLED':10s}")
+            if not mod.detect():
+                print(f"{fname:15s}  {'NOT INSTALLED':12s}")
                 continue
-            s = backend.status()
-            status_text = "ENABLED" if s.get("enabled") else "DISABLED"
-            proxy_url = s.get("proxy") or ""
-            print(f"{bname:15s}  {status_text:10s}  {proxy_url}")
+            s = mod.status()
+            status_text = "ENABLED" if s.enabled else "disabled"
+            proxy_url = s.proxy or ""
+            print(f"{fname:15s}  {status_text:12s}  {proxy_url}")
         except Exception as e:
-            print(f"{bname:15s}  {'ERROR':10s}  {e}")
+            print(f"{fname:15s}  {'ERROR':12s}  {e}")
+
+
+# ── Parser ─────────────────────────────────────────────────────────────────
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="proxy-switch",
         description="One-click proxy configuration for Ubuntu servers.",
@@ -252,30 +256,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # list
     subparsers.add_parser("list", help="List available profiles and servers")
-
-    # init
     subparsers.add_parser("init", help="Interactive setup wizard")
 
-    # on
     on_parser = subparsers.add_parser("on", help="Enable proxy using a profile")
     on_parser.add_argument("profile", nargs="?", default="default", help="Profile name")
-    on_parser.add_argument("--only", help="Comma-separated list of tools to configure")
+    on_parser.add_argument("--only", help="Comma-separated list of features to configure")
 
-    # off
     off_parser = subparsers.add_parser("off", help="Disable all proxies")
-    off_parser.add_argument("--only", help="Comma-separated list of tools to disable")
+    off_parser.add_argument("--only", help="Comma-separated list of features to disable")
 
-    # status
     status_parser = subparsers.add_parser("status", help="Show proxy status")
     status_parser.add_argument("--profile", help="Show profile details")
-    status_parser.add_argument("--json", action="store_true", help="JSON output")
+    status_parser.add_argument("--json", action="store_true", help="JSON output (NYI)")
 
     return parser
 
 
-def main(argv=None):
+# ── Main ───────────────────────────────────────────────────────────────────
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    """CLI entry point."""
     parser = build_parser()
     args = parser.parse_args(argv)
 

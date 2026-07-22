@@ -1,4 +1,6 @@
-"""Data models for profiles and server configurations."""
+"""Data models for proxy configurations and SSH servers."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
 from typing import Optional
@@ -23,12 +25,12 @@ class ProxyConfig:
 
     @property
     def is_enabled(self) -> bool:
-        """Return True if at least http_proxy or https_proxy is set."""
+        """Return True if at least one proxy is configured."""
         return bool(self.http_proxy or self.https_proxy)
 
     @property
     def primary_proxy(self) -> str:
-        """Return the best proxy URL for display."""
+        """Best proxy URL for display purposes."""
         return self.https_proxy or self.http_proxy or self.socks_proxy or ""
 
     def to_dict(self) -> dict:
@@ -40,7 +42,7 @@ class ProxyConfig:
             "no_proxy": self.no_proxy,
         }
 
-    def merged_with(self, defaults: "ProxyConfig") -> "ProxyConfig":
+    def merged_with(self, defaults: ProxyConfig) -> ProxyConfig:
         """Merge with defaults: use self value if set, otherwise fallback to defaults."""
         merged = ProxyConfig()
         for field_name in ("http_proxy", "https_proxy", "socks_proxy",
@@ -62,7 +64,7 @@ class Profile:
 
 @dataclass
 class Server:
-    """SSH server connection info."""
+    """SSH server connection information."""
     name: str
     host: str
     port: int = 22
@@ -75,3 +77,24 @@ class Server:
     @property
     def label(self) -> str:
         return f"{self.name} ({self.host}:{self.port})"
+
+
+# ── Feature Module Return Types ────────────────────────────────────────────
+
+
+@dataclass
+class Result:
+    """Standard return type for enable/disable operations."""
+    success: bool
+    message: str = ""
+    details: str = ""
+
+
+@dataclass
+class StatusInfo:
+    """Return type for status checks."""
+    enabled: bool = False
+    proxy: Optional[str] = None
+    mirror: Optional[str] = None
+    config_file: Optional[str] = None
+    notes: str = ""

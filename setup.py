@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="proxy-switch",
-    version="0.1.0",
+    version="0.2.0",
     description="One-click proxy configuration for Ubuntu servers",
-    long_description=open("README.md").read() if __import__("os").path.exists("README.md") else "",
+    long_description=open("README.md", encoding="utf-8").read() if __import__("os").path.exists("README.md") else "",
     long_description_content_type="text/markdown",
     author="proxy-switch",
     url="https://github.com/user/proxy-switch",

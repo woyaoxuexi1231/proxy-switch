@@ -2,26 +2,26 @@
 
 **一键配置 Ubuntu 服务器代理的 Windows 桌面工具**
 
-通过 SSH 连接到 Ubuntu 服务器，一次操作配置所有工具的代理（系统环境、APT、Git、Docker、Maven、npm、pip、curl、wget、Gradle、Snap）。
+通过 SSH 连接到 Ubuntu 服务器，一次操作配置所有代理（系统环境、APT、Git、Docker、npm、Maven）。
 
 ## 截图
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Proxy-Switch  v0.1         — □ × │
+│  Proxy-Switch  v0.2         — □ × │
 ├─────────────────────────────────────────────┤
 │  [▼ 选择服务器]  my-ubuntu (192.168.1.101)  │
 │  [▼ 选择 Profile]  home                      │
 │                                              │
-│  ☑ 系统环境 ☑ APT ☑ Git ☑ Docker ☑ Maven   │
-│  ☑ Gradle   ☑ npm ☑ pip ☑ curl ☑ wget ☑ Snap│
+│  ☑ System Proxy  ☑ APT  ☑ Git  ☑ Docker    │
+│  ☑ npm  ☑ Maven                              │
 │                                              │
 │  [⚡ Apply Proxy]  [✕ Disable]  [⟳ Refresh]  │
 │                                              │
 │  ┌─ Status / Log ─────────────────────────┐  │
-│  │ ✓ 系统环境: ENABLED  http://...         │  │
-│  │ ✓ APT:      ENABLED                     │  │
-│  │ ✗ Docker:   NOT INSTALLED              │  │
+│  │ ✓ system_proxy  ENABLED  http://...     │  │
+│  │ ✓ apt           ENABLED                 │  │
+│  │ ✗ docker        NOT INSTALLED           │  │
 │  └────────────────────────────────────────┘  │
 ├─────────────────────────────────────────────┤
 │  Connected: my-ubuntu | Profile: home        │
@@ -86,17 +86,12 @@ auth.username = "jdoe"
 
 | 组件 | 配置文件 | 需要 sudo | 说明 |
 |---|---|---|---|
-| 系统环境 | `/etc/environment`, `/etc/profile.d/` | ✅ | HTTP_PROXY / HTTPS_PROXY |
+| System Proxy | `/etc/environment`, `/etc/profile.d/` | ✅ | HTTP_PROXY / HTTPS_PROXY（覆盖 curl, wget, pip 等） |
 | APT | `/etc/apt/apt.conf.d/proxy.conf` | ✅ | apt update/install |
 | Git | `~/.gitconfig` | ❌ | git config --global |
 | Docker | `/etc/systemd/.../proxy.conf` | ✅ | 自动 reload + restart |
-| Maven | `~/.m2/settings.xml` | ❌ | 自动合并已有配置 |
-| Gradle | `~/.gradle/gradle.properties` | ❌ | |
 | npm | `~/.npmrc` | ❌ | npm config set |
-| pip | `~/.config/pip/pip.conf` | ❌ | |
-| curl | `~/.curlrc` | ❌ | |
-| wget | `~/.wgetrc` | ❌ | |
-| Snap | snap set system proxy | ✅ | |
+| Maven | `~/.m2/settings.xml` | ❌ | 自动合并已有配置 |
 
 ## CLI 模式
 
@@ -126,22 +121,43 @@ python -m proxy_switch list
 
 ```bash
 pip install pyinstaller
-make build
+
+# 直接使用 PyInstaller（Windows / Linux / macOS 通用）
+pyinstaller build.spec
+
 # 输出: dist/proxy-switch.exe (~25MB)
 ```
+
+> Windows 用户请直接执行 `pyinstaller build.spec`，`make build` 仅适用于已安装 Make 的环境。
 
 ## 项目结构
 
 ```
 proxy-switch/
-├── app.py                    # GUI 入口
+├── app.py                        # GUI 入口
+├── build.spec                    # PyInstaller 打包配置
 ├── proxy_switch/
-│   ├── core/                 # 配置和模型
-│   ├── backends/             # 11 个代理后端
-│   ├── ssh/                  # SSH 连接管理
-│   └── gui/                  # CustomTkinter 界面
+│   ├── __main__.py               # CLI 入口
+│   ├── core/
+│   │   ├── models.py             # 数据模型（ProxyConfig, Profile, Server, Result）
+│   │   └── config.py             # TOML 配置读写
+│   ├── features/                 # 功能模块（每个工具一个模块）
+│   │   ├── system_proxy.py       # 系统环境代理
+│   │   ├── apt.py                # APT 代理
+│   │   ├── docker.py             # Docker 代理
+│   │   ├── git.py                # Git 代理
+│   │   ├── npm.py                # npm 代理
+│   │   └── maven.py              # Maven 代理
+│   ├── ssh/
+│   │   └── connection.py         # SSH 连接 + 远程执行
+│   └── gui/
+│       ├── theme.py              # 主题与字体
+│       ├── window.py             # 主窗口
+│       └── dialogs.py            # 添加/编辑对话框
+├── tests/
+│   ├── test_features.py          # 功能模块测试
+│   └── test_models.py            # 数据模型测试
 ├── requirements.txt
-├── build.spec                # PyInstaller 配置
 └── Makefile
 ```
 
