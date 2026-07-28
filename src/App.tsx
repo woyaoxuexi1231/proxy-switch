@@ -81,13 +81,14 @@ export default function App() {
         </section>
         <section className="section">
           <h2 className="section-title">Local (Windows)</h2>
-          {LOCAL_COMPONENTS.map((comp) => (
+          {LOCAL_COMPONENTS.map((comp, i) => (
             <ProxyCard
               key={comp}
               component={comp}
               label={COMPONENT_LABELS[comp]}
               isRemote={false}
               connected={true}
+              autoDetectDelay={i * 500}
             />
           ))}
         </section>

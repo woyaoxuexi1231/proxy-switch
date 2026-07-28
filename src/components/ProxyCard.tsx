@@ -10,9 +10,11 @@ interface Props {
   label: string;
   isRemote: boolean;
   connected: boolean;
+  /** Delay (ms) before auto-detecting on mount. Only used for local components. */
+  autoDetectDelay?: number;
 }
 
-export function ProxyCard({ component, label, isRemote, connected }: Props) {
+export function ProxyCard({ component, label, isRemote, connected, autoDetectDelay }: Props) {
   const { status, loading, message, refresh, enable, disable, setMessage } =
     useProxyStatus(component, isRemote);
   const [expanded, setExpanded] = useState(false);
@@ -25,10 +27,13 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
   const needsSudo = ['system_proxy', 'apt', 'docker_remote'].includes(component);
   const supportsMirror = ['apt', 'docker_remote', 'npm_remote', 'maven_remote'].includes(component);
 
-  // Auto-detect on mount for local components (always "connected")
+  // Auto-detect on mount for local components (staggered to avoid freezing)
   useEffect(() => {
-    if (!isRemote) {
-      refresh();
+    if (!isRemote && autoDetectDelay !== undefined) {
+      const timer = setTimeout(() => {
+        refresh();
+      }, autoDetectDelay);
+      return () => clearTimeout(timer);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
