@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addServer, updateServer } from '../utils/invoke';
 import type { Server, ServerInput } from '../types';
 import './ServerDialog.css';
@@ -10,6 +10,16 @@ interface Props {
 }
 
 export function ServerDialog({ server, onSaved, onCancel }: Props) {
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
   const [name, setName] = useState(server?.name || '');
   const [host, setHost] = useState(server?.host || '');
   const [port, setPort] = useState(String(server?.port || 22));

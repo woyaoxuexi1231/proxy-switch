@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProxyStatus } from '../hooks/useProxyStatus';
 import { StatusIndicator } from './StatusIndicator';
 import { ManualGuide } from './ManualGuide';
@@ -24,6 +24,22 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
 
   const needsSudo = ['system_proxy', 'apt', 'docker_remote'].includes(component);
   const supportsMirror = ['apt', 'docker_remote', 'npm_remote', 'maven_remote'].includes(component);
+
+  // Auto-detect on mount for local components (always "connected")
+  useEffect(() => {
+    if (!isRemote) {
+      refresh();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-detect for remote components when SSH connects
+  const prevConnected = useRef(connected);
+  useEffect(() => {
+    if (isRemote && connected && !prevConnected.current) {
+      refresh();
+    }
+    prevConnected.current = connected;
+  }, [isRemote, connected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fill form from detected status
   useEffect(() => {
