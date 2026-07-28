@@ -1,0 +1,28 @@
+[package]
+name = "proxy-switch"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+ssh2 = "0.9"
+thiserror = "2"
+dirs = "6"
+regex = "1"
+quick-xml = "0.37"
+base64 = "0.22"
+anyhow = "1"
+shellexpand = "3"
+uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["process", "sync", "macros"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
