@@ -1,22 +1,8 @@
-# Proxy Switch
+# 🔌 Proxy Switch
 
-<p align="center">
-  <img src="src-tauri/icons/128x128.png" alt="Proxy Switch" width="128" />
-</p>
+> **A desktop app to manage proxy settings across local Windows and remote Linux servers — all from one clean interface.**
 
-<p align="center">
-  <strong>A desktop app to manage proxy settings across local Windows and remote Linux servers — all from one clean interface.</strong>
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#screenshot">Screenshot</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#usage">Usage</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#development">Development</a> •
-  <a href="#license">License</a>
-</p>
+[Features](#features) · [Installation](#installation) · [Usage](#usage) · [Architecture](#architecture) · [Development](#development) · [License](#license)
 
 ---
 
@@ -61,30 +47,20 @@ Configuring proxies is **tedious**. Every tool has its own config file, its own 
 ## Screenshot
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  🔌 Proxy Switch                                            │
-├────────────┬─────────────────────────────────────────────────┤
-│            │                                                 │
-│  SERVERS   │  Remote (Ubuntu via SSH)                        │
-│            │                                                 │
-│  ┌───────┐ │  ┌─ System Proxy (Remote) ───────────────────┐  │
-│  │ ● dev │ │  │ ● ENABLED — http://127.0.0.1:7890     [▼] │  │
-│  │  …101 │ │  └───────────────────────────────────────────┘  │
-│  │  root │ │  ┌─ APT (Remote) ────────────────────────────┐  │
-│  │[断开] │ │  │ ○ disabled                            [▶] │  │
-│  └───────┘ │  └───────────────────────────────────────────┘  │
-│  [+ Add]   │  ... (Git, Docker, npm, Maven)                  │
-│            │                                                 │
-│  LOCAL     │  Local (Windows)                                │
-│  ┌───────┐ │  ┌─ Git (Local) ─────────────────────────────┐  │
-│  │ 🖥 PC │ │  │ ○ disabled                            [▶] │  │
-│  │ Win   │ │  └───────────────────────────────────────────┘  │
-│  │ ●     │ │  ... (Docker, npm, Maven)                       │
-│  └───────┘ │                                                 │
-│            │                                                 │
-├────────────┴─────────────────────────────────────────────────┤
-│  Connected: dev-server                                       │
-└──────────────────────────────────────────────────────────────┘
+ ┌─ Sidebar ─────┐  ┌─ Main Content ──────────────────────┐
+ │                │  │                                      │
+ │  ● dev-server  │  │  ● System Proxy  ENABLED  [▼]       │
+ │    192.168...  │  │  ○ APT           disabled [▶]       │
+ │    [断开]      │  │  ○ Git (Remote)  disabled [▶]       │
+ │                │  │  ○ Docker        disabled [▶]       │
+ │  [+ Add]       │  │  ○ npm           disabled [▶]       │
+ │                │  │  ○ Maven         disabled [▶]       │
+ │  ── Local ──── │  │                                      │
+ │  ● This PC     │  │  ○ Git (Local)   disabled [▶]       │
+ │                │  │  ○ Docker(Local) disabled [▶]       │
+ │                │  │  ○ npm (Local)   disabled [▶]       │
+ │                │  │  ○ Maven(Local)  disabled [▶]       │
+ └────────────────┘  └──────────────────────────────────────┘
 ```
 
 ---
