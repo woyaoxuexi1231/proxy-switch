@@ -7,12 +7,6 @@ const DEFAULT_REGISTRY: &str = "https://registry.npmjs.org/";
 pub struct NpmRemoteModule;
 
 impl ProxyModule for NpmRemoteModule {
-    fn name(&self) -> &'static str {
-        "npm_remote"
-    }
-    fn description(&self) -> &'static str {
-        "npm package manager proxy"
-    }
     fn config_files(&self) -> Vec<String> {
         vec!["~/.npmrc".into()]
     }

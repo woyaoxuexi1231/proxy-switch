@@ -9,12 +9,6 @@ const DAEMON_JSON: &str = "/etc/docker/daemon.json";
 pub struct DockerRemoteModule;
 
 impl ProxyModule for DockerRemoteModule {
-    fn name(&self) -> &'static str {
-        "docker_remote"
-    }
-    fn description(&self) -> &'static str {
-        "Docker daemon proxy"
-    }
     fn config_files(&self) -> Vec<String> {
         vec![DOCKER_CONF.into(), DAEMON_JSON.into()]
     }

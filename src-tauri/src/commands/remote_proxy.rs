@@ -6,14 +6,14 @@ use crate::ssh::connection::ConnectionPool;
 use tauri::State;
 
 #[tauri::command]
-pub fn remote_detect(pool: State<'_, ConnectionPool>, component: String) -> Result<ProxyStatus, String> {
+pub fn remote_detect(pool: State<'_, std::sync::Arc<ConnectionPool>>, component: String) -> Result<ProxyStatus, String> {
     let cid = parse_component(&component)?;
     pool.with_session(|session| detect_remote(session, &cid))
 }
 
 #[tauri::command]
 pub fn remote_enable(
-    pool: State<'_, ConnectionPool>,
+    pool: State<'_, std::sync::Arc<ConnectionPool>>,
     component: String,
     config: ProxyConfig,
 ) -> Result<OpResult, String> {
@@ -26,7 +26,7 @@ pub fn remote_enable(
 
 #[tauri::command]
 pub fn remote_disable(
-    pool: State<'_, ConnectionPool>,
+    pool: State<'_, std::sync::Arc<ConnectionPool>>,
     component: String,
 ) -> Result<OpResult, String> {
     let cid = parse_component(&component)?;

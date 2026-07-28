@@ -5,12 +5,6 @@ use crate::ssh::connection::SshSession;
 pub struct GitRemoteModule;
 
 impl ProxyModule for GitRemoteModule {
-    fn name(&self) -> &'static str {
-        "git_remote"
-    }
-    fn description(&self) -> &'static str {
-        "Git VCS proxy (git config --global)"
-    }
     fn config_files(&self) -> Vec<String> {
         vec!["~/.gitconfig".into()]
     }

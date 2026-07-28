@@ -11,12 +11,6 @@ const PROXY_KEYS_UPPER: &[&str] = &["HTTP_PROXY", "HTTPS_PROXY", "FTP_PROXY", "N
 pub struct SystemProxyModule;
 
 impl ProxyModule for SystemProxyModule {
-    fn name(&self) -> &'static str {
-        "system_proxy"
-    }
-    fn description(&self) -> &'static str {
-        "System environment proxy (/etc/environment)"
-    }
     fn config_files(&self) -> Vec<String> {
         vec![ENV_FILE.into(), PROFILE_FILE.into()]
     }

@@ -4,6 +4,7 @@ pub mod models;
 mod proxy;
 mod ssh;
 
+use std::sync::Arc;
 use config::store::ConfigStore;
 use ssh::connection::ConnectionPool;
 
@@ -12,7 +13,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(ConfigStore::new())
-        .manage(ConnectionPool::new())
+        .manage(Arc::new(ConnectionPool::new()))
         .invoke_handler(tauri::generate_handler![
             // Server commands
             commands::server::get_servers,

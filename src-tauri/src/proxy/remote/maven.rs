@@ -7,12 +7,6 @@ const SETTINGS_PATH: &str = "~/.m2/settings.xml";
 pub struct MavenRemoteModule;
 
 impl ProxyModule for MavenRemoteModule {
-    fn name(&self) -> &'static str {
-        "maven_remote"
-    }
-    fn description(&self) -> &'static str {
-        "Maven build tool proxy"
-    }
     fn config_files(&self) -> Vec<String> {
         vec![SETTINGS_PATH.into()]
     }

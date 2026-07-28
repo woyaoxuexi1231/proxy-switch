@@ -19,9 +19,6 @@ pub struct CommandResult {
 }
 
 impl CommandResult {
-    pub fn success(&self) -> bool {
-        self.exit_code == 0
-    }
 }
 
 impl SshSession {
@@ -201,16 +198,6 @@ impl ConnectionPool {
             }
             None => Err("Not connected to any server. Connect first.".into()),
         }
-    }
-
-    pub fn connect(&self, server: &Server) -> Result<(), String> {
-        let session = SshSession::connect(server, 15)?;
-        let mut guard = self
-            .current
-            .lock()
-            .map_err(|e| format!("Lock error: {}", e))?;
-        *guard = Some(session);
-        Ok(())
     }
 
     pub fn disconnect(&self) {

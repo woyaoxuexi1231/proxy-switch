@@ -8,13 +8,7 @@ impl NpmLocalModule {
         Self
     }
 
-    pub fn name(&self) -> &'static str {
-        "npm_local"
-    }
 
-    pub fn description(&self) -> &'static str {
-        "npm package manager proxy (Windows)"
-    }
 
     pub fn config_files(&self) -> Vec<String> {
         vec!["%USERPROFILE%\\.npmrc".into()]

@@ -9,13 +9,7 @@ impl DockerLocalModule {
         Self
     }
 
-    pub fn name(&self) -> &'static str {
-        "docker_local"
-    }
 
-    pub fn description(&self) -> &'static str {
-        "Docker Desktop proxy (Windows)"
-    }
 
     pub fn config_files(&self) -> Vec<String> {
         vec!["%USERPROFILE%\\.docker\\daemon.json".into()]

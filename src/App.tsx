@@ -2,18 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ProxyCard } from './components/ProxyCard';
 import { ServerDialog } from './components/ServerDialog';
-import { getServers } from './utils/invoke';
+import { getServers, deleteServer } from './utils/invoke';
 import { useSshConnection } from './hooks/useSshConnection';
-import {
-  REMOTE_COMPONENTS,
-  LOCAL_COMPONENTS,
-  COMPONENT_LABELS,
-} from './types';
+import { REMOTE_COMPONENTS, LOCAL_COMPONENTS, COMPONENT_LABELS } from './types';
 import type { Server } from './types';
 
 export default function App() {
   const [servers, setServers] = useState<Server[]>([]);
-  const [showAddServer, setShowAddServer] = useState(false);
+  const [showServerDialog, setShowServerDialog] = useState(false);
+  const [editingServer, setEditingServer] = useState<Server | null>(null);
   const { connected, serverName, loading: connLoading, error: connError, connect, disconnect } =
     useSshConnection();
 
@@ -30,11 +27,29 @@ export default function App() {
     loadServers();
   }, [loadServers]);
 
-  const handleAddServer = () => setShowAddServer(true);
+  const handleAddServer = () => {
+    setEditingServer(null);
+    setShowServerDialog(true);
+  };
+
+  const handleEditServer = (server: Server) => {
+    setEditingServer(server);
+    setShowServerDialog(true);
+  };
 
   const handleServerSaved = () => {
-    setShowAddServer(false);
+    setShowServerDialog(false);
+    setEditingServer(null);
     loadServers();
+  };
+
+  const handleDeleteServer = async (name: string) => {
+    try {
+      await deleteServer(name);
+      loadServers();
+    } catch {
+      // ignore
+    }
   };
 
   return (
@@ -48,6 +63,8 @@ export default function App() {
         onConnect={connect}
         onDisconnect={disconnect}
         onAddServer={handleAddServer}
+        onEditServer={handleEditServer}
+        onDeleteServer={handleDeleteServer}
       />
       <main className="main-content">
         <section className="section">
@@ -78,11 +95,14 @@ export default function App() {
       <footer className="status-bar">
         <span>{connected ? `Connected: ${serverName}` : 'Not connected'}</span>
       </footer>
-      {showAddServer && (
+      {showServerDialog && (
         <ServerDialog
-          server={null}
+          server={editingServer}
           onSaved={handleServerSaved}
-          onCancel={() => setShowAddServer(false)}
+          onCancel={() => {
+            setShowServerDialog(false);
+            setEditingServer(null);
+          }}
         />
       )}
     </div>

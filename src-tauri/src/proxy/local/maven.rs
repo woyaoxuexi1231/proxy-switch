@@ -9,13 +9,7 @@ impl MavenLocalModule {
         Self
     }
 
-    pub fn name(&self) -> &'static str {
-        "maven_local"
-    }
 
-    pub fn description(&self) -> &'static str {
-        "Maven build tool proxy (Windows)"
-    }
 
     pub fn config_files(&self) -> Vec<String> {
         vec!["%USERPROFILE%\\.m2\\settings.xml".into()]

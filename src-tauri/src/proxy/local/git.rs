@@ -8,13 +8,7 @@ impl GitLocalModule {
         Self
     }
 
-    pub fn name(&self) -> &'static str {
-        "git_local"
-    }
 
-    pub fn description(&self) -> &'static str {
-        "Git VCS proxy (Windows — git config --global)"
-    }
 
     pub fn config_files(&self) -> Vec<String> {
         vec!["%USERPROFILE%\\.gitconfig".into()]

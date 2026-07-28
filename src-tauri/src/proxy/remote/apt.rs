@@ -7,12 +7,6 @@ const APT_CONF: &str = "/etc/apt/apt.conf.d/proxy.conf";
 pub struct AptModule;
 
 impl ProxyModule for AptModule {
-    fn name(&self) -> &'static str {
-        "apt"
-    }
-    fn description(&self) -> &'static str {
-        "APT package manager proxy"
-    }
     fn config_files(&self) -> Vec<String> {
         vec![APT_CONF.into()]
     }

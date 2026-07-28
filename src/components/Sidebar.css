@@ -106,9 +106,14 @@
   color: var(--text-muted);
 }
 
-.server-action-btn {
+.server-card-actions {
+  display: flex;
+  gap: 4px;
   margin-top: 6px;
-  width: 100%;
+}
+
+.server-action-btn {
+  flex: 1;
   padding: 4px 0;
   font-size: var(--text-xs);
   font-family: var(--font-sans);
@@ -118,6 +123,7 @@
   color: var(--text-primary);
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s;
+  text-align: center;
 }
 
 .server-action-btn:hover {
@@ -137,6 +143,31 @@
 
 .server-action-btn.danger:hover {
   background: var(--danger-bg);
+}
+
+.server-card-mini-btns {
+  display: flex;
+  gap: 2px;
+}
+
+.mini-btn {
+  padding: 3px 6px;
+  font-size: var(--text-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: background 0.12s;
+  line-height: 1;
+}
+
+.mini-btn:hover {
+  background: var(--bg-hover);
+}
+
+.mini-btn.danger {
+  background: var(--danger-bg);
+  border-color: var(--danger);
 }
 
 .add-server-btn {
