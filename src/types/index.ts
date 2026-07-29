@@ -73,6 +73,22 @@ export interface ProxyStatus {
   manual_setup_steps: ManualStep[];
 }
 
+/** Three distinct proxy states */
+export type ProxyState = 'not_installed' | 'not_started' | 'started';
+
+export function getProxyState(status: ProxyStatus | null): ProxyState | null {
+  if (!status) return null;
+  if (!status.installed) return 'not_installed';
+  if (!status.enabled) return 'not_started';
+  return 'started';
+}
+
+export const PROXY_STATE_LABEL: Record<ProxyState, string> = {
+  not_installed: 'NOT INSTALLED',
+  not_started: 'NOT STARTED',
+  started: 'ENABLED',
+};
+
 export interface OpResult {
   success: boolean;
   message: string;

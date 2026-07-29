@@ -1,3 +1,4 @@
+import { getProxyState } from '../types';
 import type { ProxyStatus } from '../types';
 
 interface Props {
@@ -8,36 +9,43 @@ interface Props {
 export function StatusIndicator({ status, loading }: Props) {
   if (loading) {
     return (
-      <span className="proxy-status-text" style={{ color: 'var(--text-muted)' }}>
-        ⟳ detecting...
+      <span className="proxy-status-text status-loading">
+        ⟳ Detecting...
       </span>
     );
   }
+
   if (!status) {
     return (
-      <span className="proxy-status-text" style={{ color: 'var(--text-muted)' }}>
-        — not checked
+      <span className="proxy-status-text status-muted">
+        — Not checked
       </span>
     );
   }
-  if (!status.installed) {
+
+  const state = getProxyState(status);
+
+  if (state === 'not_installed') {
     return (
-      <span className="proxy-status-text" style={{ color: 'var(--text-muted)' }}>
-        ⏭ NOT INSTALLED
+      <span className="proxy-status-text status-not-installed">
+        ✕ NOT INSTALLED
       </span>
     );
   }
-  if (status.enabled) {
-    const proxy = status.current_https_proxy || status.current_http_proxy;
+
+  if (state === 'not_started') {
     return (
-      <span className="proxy-status-text" style={{ color: 'var(--success)' }}>
-        ● ENABLED{proxy ? ` — ${proxy}` : ''}
+      <span className="proxy-status-text status-not-started">
+        ◐ NOT STARTED
       </span>
     );
   }
+
+  // state === 'started'
+  const proxy = status.current_https_proxy || status.current_http_proxy;
   return (
-    <span className="proxy-status-text" style={{ color: 'var(--text-secondary)' }}>
-      ○ disabled
+    <span className="proxy-status-text status-started">
+      ● ENABLED{proxy ? ` — ${proxy}` : ''}
     </span>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useProxyStatus } from '../hooks/useProxyStatus';
 import { StatusIndicator } from './StatusIndicator';
 import { ManualGuide } from './ManualGuide';
+import { getProxyState } from '../types';
 import type { ComponentId, ProxyConfig } from '../types';
 import './ProxyCard.css';
 
@@ -97,7 +98,7 @@ export function ProxyCard({ component, label, isRemote, connected, autoDetectDel
         <div className="proxy-card-title">
           <StatusIndicator status={status} loading={loading} />
           <span className="proxy-card-label">{label}</span>
-          {proxyDisplay && !status?.enabled === false && (
+          {proxyDisplay && getProxyState(status) === 'started' && (
             <span className="proxy-card-value">{proxyDisplay}</span>
           )}
         </div>
@@ -196,7 +197,7 @@ export function ProxyCard({ component, label, isRemote, connected, autoDetectDel
             <button
               className="btn btn-danger-outline"
               onClick={handleDisable}
-              disabled={loading || !status || !status.enabled}
+              disabled={loading || getProxyState(status) !== 'started'}
             >
               Disable
             </button>

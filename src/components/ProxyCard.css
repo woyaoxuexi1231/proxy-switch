@@ -50,6 +50,27 @@
   font-weight: 500;
 }
 
+/* Three proxy states */
+.status-loading {
+  color: var(--text-muted);
+}
+
+.status-muted {
+  color: var(--text-muted);
+}
+
+.status-not-installed {
+  color: var(--text-muted);
+}
+
+.status-not-started {
+  color: var(--warning);
+}
+
+.status-started {
+  color: var(--success);
+}
+
 .proxy-card-label {
   font-size: var(--text-base);
   font-weight: 600;
