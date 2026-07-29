@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ProxyCard } from './components/ProxyCard';
 import { ServerDialog } from './components/ServerDialog';
-import { getServers, deleteServer, localDetectAll, remoteDetectAll } from './utils/invoke';
+import { getServers, deleteServer } from './utils/invoke';
 import { useSshConnection } from './hooks/useSshConnection';
 import { REMOTE_COMPONENTS, LOCAL_COMPONENTS, COMPONENT_LABELS } from './types';
-import type { Server, ProxyStatus } from './types';
+import type { Server } from './types';
 
 export default function App() {
   const [servers, setServers] = useState<Server[]>([]);
@@ -13,10 +13,6 @@ export default function App() {
   const [editingServer, setEditingServer] = useState<Server | null>(null);
   const { connected, serverName, loading: connLoading, error: connError, connect, disconnect } =
     useSshConnection();
-
-  // Batch-detected statuses
-  const [localStatuses, setLocalStatuses] = useState<ProxyStatus[]>([]);
-  const [remoteStatuses, setRemoteStatuses] = useState<ProxyStatus[]>([]);
 
   const loadServers = useCallback(async () => {
     try {
@@ -30,20 +26,6 @@ export default function App() {
   useEffect(() => {
     loadServers();
   }, [loadServers]);
-
-  // Batch detect all local components on mount
-  useEffect(() => {
-    localDetectAll().then(setLocalStatuses).catch(() => {});
-  }, []);
-
-  // Batch detect all remote components when SSH connects
-  useEffect(() => {
-    if (connected) {
-      remoteDetectAll().then(setRemoteStatuses).catch(() => {});
-    } else {
-      setRemoteStatuses([]);
-    }
-  }, [connected]);
 
   const handleAddServer = () => {
     setEditingServer(null);
@@ -70,12 +52,6 @@ export default function App() {
     }
   };
 
-  const getLocalStatus = (comp: string) =>
-    localStatuses.find((s) => s.component === comp) ?? null;
-
-  const getRemoteStatus = (comp: string) =>
-    remoteStatuses.find((s) => s.component === comp) ?? null;
-
   return (
     <div className="app">
       <Sidebar
@@ -100,7 +76,6 @@ export default function App() {
               label={COMPONENT_LABELS[comp]}
               isRemote
               connected={connected}
-              initialStatus={getRemoteStatus(comp)}
             />
           ))}
         </section>
@@ -113,7 +88,6 @@ export default function App() {
               label={COMPONENT_LABELS[comp]}
               isRemote={false}
               connected={true}
-              initialStatus={getLocalStatus(comp)}
             />
           ))}
         </section>

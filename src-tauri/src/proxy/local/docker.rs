@@ -39,7 +39,7 @@ impl DockerLocalModule {
     }
 
     pub fn detect(&self) -> bool {
-        tool_exists("docker")
+        find_in_path("docker")
     }
 
     fn daemon_path() -> Option<std::path::PathBuf> {

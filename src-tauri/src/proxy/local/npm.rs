@@ -1,5 +1,6 @@
 use super::*;
 use crate::models::{ComponentId, ManualStep, OpResult, ProxyConfig, ProxyStatus};
+use std::fs;
 
 pub struct NpmLocalModule;
 
@@ -7,8 +8,6 @@ impl NpmLocalModule {
     pub fn new() -> Self {
         Self
     }
-
-
 
     pub fn config_files(&self) -> Vec<String> {
         vec!["%USERPROFILE%\\.npmrc".into()]
@@ -32,12 +31,11 @@ impl NpmLocalModule {
     }
 
     pub fn detect(&self) -> bool {
-        tool_exists("npm")
+        find_in_path("npm")
     }
 
     pub fn status(&self) -> ProxyStatus {
-        let proxy = npm_config_get("proxy");
-        let https = npm_config_get("https-proxy");
+        let (proxy, https) = read_npmrc_proxy();
         ProxyStatus {
             component: ComponentId::NpmLocal,
             installed: self.detect(),
@@ -84,10 +82,39 @@ impl NpmLocalModule {
     }
 }
 
-fn npm_config_get(key: &str) -> String {
-    let (_, out) = run_cmd("npm", &["config", "get", key]);
-    out
+// ── Direct .npmrc parsing (zero process spawn) ─────────────────────────────
+
+fn read_npmrc_proxy() -> (String, String) {
+    let path = match dirs::home_dir() {
+        Some(h) => h.join(".npmrc"),
+        None => return (String::new(), String::new()),
+    };
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return (String::new(), String::new()),
+    };
+    let mut proxy = String::new();
+    let mut https_proxy = String::new();
+    for line in content.lines() {
+        let trimmed = line.trim();
+        // Skip comments and empty lines
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+            continue;
+        }
+        if let Some(eq_pos) = trimmed.find('=') {
+            let key = trimmed[..eq_pos].trim();
+            let val = trimmed[eq_pos + 1..].trim();
+            match key {
+                "proxy" => proxy = val.to_string(),
+                "https-proxy" => https_proxy = val.to_string(),
+                _ => {}
+            }
+        }
+    }
+    (proxy, https_proxy)
 }
+
+// ── Command-line operations (for enable/disable) ───────────────────────────
 
 fn npm_config_set(key: &str, val: &str) -> bool {
     run_cmd("npm", &["config", "set", key, val]).0

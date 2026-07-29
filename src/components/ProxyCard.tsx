@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useProxyStatus } from '../hooks/useProxyStatus';
 import { StatusIndicator } from './StatusIndicator';
 import { ManualGuide } from './ManualGuide';
 import { getProxyState } from '../types';
-import type { ComponentId, ProxyConfig, ProxyStatus } from '../types';
+import type { ComponentId, ProxyConfig } from '../types';
 import './ProxyCard.css';
 
 interface Props {
@@ -11,12 +11,11 @@ interface Props {
   label: string;
   isRemote: boolean;
   connected: boolean;
-  initialStatus?: ProxyStatus | null;
 }
 
-export function ProxyCard({ component, label, isRemote, connected, initialStatus }: Props) {
+export function ProxyCard({ component, label, isRemote, connected }: Props) {
   const { status, loading, message, refresh, enable, disable, setMessage } =
-    useProxyStatus(component, isRemote, initialStatus);
+    useProxyStatus(component, isRemote);
   const [expanded, setExpanded] = useState(false);
 
   const [httpProxy, setHttpProxy] = useState('');
@@ -26,15 +25,6 @@ export function ProxyCard({ component, label, isRemote, connected, initialStatus
 
   const needsSudo = ['system_proxy', 'apt', 'docker_remote'].includes(component);
   const supportsMirror = ['apt', 'docker_remote', 'npm_remote', 'maven_remote'].includes(component);
-
-  // Auto-detect for remote components when SSH connects
-  const prevConnected = useRef(connected);
-  useEffect(() => {
-    if (isRemote && connected && !prevConnected.current) {
-      refresh();
-    }
-    prevConnected.current = connected;
-  }, [isRemote, connected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fill form from detected status
   useEffect(() => {
@@ -76,25 +66,33 @@ export function ProxyCard({ component, label, isRemote, connected, initialStatus
   return (
     <div className={`proxy-card${expanded ? ' expanded' : ''}`}>
       {/* ── Header (always visible) ─────────────────────────────── */}
-      <button
-        className="proxy-card-header"
-        onClick={() => {
-          if (connected) setExpanded(!expanded);
-        }}
-        disabled={!connected}
-        title={connected ? 'Click to expand' : 'Not connected'}
-      >
-        <div className="proxy-card-title">
+      <div className="proxy-card-header">
+        <button
+          className="proxy-card-title-btn"
+          onClick={() => {
+            if (connected) setExpanded(!expanded);
+          }}
+          disabled={!connected}
+          title={connected ? 'Click to expand' : 'Not connected'}
+        >
           <StatusIndicator status={status} loading={loading} />
           <span className="proxy-card-label">{label}</span>
           {proxyDisplay && getProxyState(status) === 'started' && (
             <span className="proxy-card-value">{proxyDisplay}</span>
           )}
-        </div>
-        <span className={`proxy-card-chevron${expanded ? ' up' : ''}`}>
-          {connected ? (expanded ? '▲' : '▼') : ''}
-        </span>
-      </button>
+          <span className={`proxy-card-chevron${expanded ? ' up' : ''}`}>
+            {connected ? (expanded ? '▲' : '▼') : ''}
+          </span>
+        </button>
+        <button
+          className="btn btn-ghost btn-refresh"
+          onClick={handleRefresh}
+          disabled={loading}
+          title="Refresh status"
+        >
+          ⟳
+        </button>
+      </div>
 
       {/* ── Expanded content ────────────────────────────────────── */}
       {expanded && (
@@ -189,13 +187,6 @@ export function ProxyCard({ component, label, isRemote, connected, initialStatus
               disabled={loading || getProxyState(status) !== 'started'}
             >
               Disable
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              ⟳ Refresh
             </button>
             {needsSudo && isRemote && (
               <span className="sudo-tag">sudo</span>

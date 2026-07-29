@@ -1,5 +1,6 @@
 use super::*;
 use crate::models::{ComponentId, ManualStep, OpResult, ProxyConfig, ProxyStatus};
+use std::fs;
 
 pub struct GitLocalModule;
 
@@ -7,8 +8,6 @@ impl GitLocalModule {
     pub fn new() -> Self {
         Self
     }
-
-
 
     pub fn config_files(&self) -> Vec<String> {
         vec!["%USERPROFILE%\\.gitconfig".into()]
@@ -32,19 +31,11 @@ impl GitLocalModule {
     }
 
     pub fn detect(&self) -> bool {
-        tool_exists("git")
+        find_in_path("git")
     }
 
     pub fn status(&self) -> ProxyStatus {
-        let http = git_config_get("http.proxy");
-        let https = git_config_get("https.proxy");
-        let _proxy = if !https.is_empty() {
-            Some(https.clone())
-        } else if !http.is_empty() {
-            Some(http.clone())
-        } else {
-            None
-        };
+        let (http, https) = read_gitconfig_proxy();
         ProxyStatus {
             component: ComponentId::GitLocal,
             installed: self.detect(),
@@ -91,10 +82,49 @@ impl GitLocalModule {
     }
 }
 
-fn git_config_get(key: &str) -> String {
-    let (_, out) = run_cmd("git", &["config", "--global", "--get", key]);
-    out
+// ── Direct .gitconfig parsing (zero process spawn) ─────────────────────────
+
+fn read_gitconfig_proxy() -> (String, String) {
+    let path = match dirs::home_dir() {
+        Some(h) => h.join(".gitconfig"),
+        None => return (String::new(), String::new()),
+    };
+    let content = match fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(_) => return (String::new(), String::new()),
+    };
+    let mut http = String::new();
+    let mut https = String::new();
+    let mut current_section = "";
+    for line in content.lines() {
+        let trimmed = line.trim();
+        // Track INI section
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            current_section = &trimmed[1..trimmed.len() - 1];
+            // Handle "http" and 'http' quoting variants
+            let section = current_section.trim_matches('"').trim_matches('\'');
+            if section.eq_ignore_ascii_case("http") {
+                current_section = "http";
+            } else if section.eq_ignore_ascii_case("https") {
+                current_section = "https";
+            }
+            continue;
+        }
+        // Parse key = value
+        if let Some(eq_pos) = trimmed.find('=') {
+            let key = trimmed[..eq_pos].trim();
+            let val = trimmed[eq_pos + 1..].trim();
+            match current_section {
+                "http" if key.eq_ignore_ascii_case("proxy") => http = val.to_string(),
+                "https" if key.eq_ignore_ascii_case("proxy") => https = val.to_string(),
+                _ => {}
+            }
+        }
+    }
+    (http, https)
 }
+
+// ── Command-line operations (for enable/disable, where process spawn is acceptable) ──
 
 fn git_config_set(key: &str, val: &str) -> bool {
     run_cmd("git", &["config", "--global", key, val]).0

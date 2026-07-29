@@ -35,7 +35,7 @@ impl MavenLocalModule {
     }
 
     pub fn detect(&self) -> bool {
-        tool_exists("mvn")
+        find_in_path("mvn")
     }
 
     fn settings_path() -> Option<std::path::PathBuf> {

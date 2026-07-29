@@ -1,4 +1,5 @@
 // Shared utility functions for local proxy modules
+use std::path::PathBuf;
 use std::process::Command;
 
 fn apply_no_window(cmd: &mut Command) {
@@ -23,13 +24,30 @@ fn run_cmd(program: &str, args: &[&str]) -> (bool, String) {
     }
 }
 
-fn tool_exists(tool: &str) -> bool {
-    let mut cmd = Command::new("where");
-    cmd.args([tool]);
-    apply_no_window(&mut cmd);
-    cmd.output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+/// Fast tool existence check — searches PATH directly without spawning a process.
+/// On Windows, checks for tool.exe, tool.cmd, and tool.bat.
+pub fn find_in_path(tool: &str) -> bool {
+    if let Ok(path_var) = std::env::var("PATH") {
+        for dir in path_var.split(';') {
+            let base = PathBuf::from(dir).join(tool);
+            #[cfg(windows)]
+            {
+                if base.with_extension("exe").exists()
+                    || base.with_extension("cmd").exists()
+                    || base.with_extension("bat").exists()
+                {
+                    return true;
+                }
+            }
+            #[cfg(not(windows))]
+            {
+                if base.exists() {
+                    return true;
+                }
+            }
+        }
+    }
+    false
 }
 
 pub mod docker;

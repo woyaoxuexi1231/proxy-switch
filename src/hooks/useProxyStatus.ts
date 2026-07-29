@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { detectProxy, enableProxy, disableProxy } from '../utils/invoke';
 import type { ComponentId, ProxyConfig, ProxyStatus } from '../types';
 
-export function useProxyStatus(component: ComponentId, isRemote: boolean, initialStatus?: ProxyStatus | null) {
-  const [status, setStatus] = useState<ProxyStatus | null>(initialStatus ?? null);
+export function useProxyStatus(component: ComponentId, isRemote: boolean) {
+  const [status, setStatus] = useState<ProxyStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -26,7 +26,6 @@ export function useProxyStatus(component: ComponentId, isRemote: boolean, initia
       try {
         const result = await enableProxy(component, config, isRemote);
         setMessage(result.message);
-        // Refresh after enable
         const s = await detectProxy(component, isRemote);
         setStatus(s);
       } catch (e) {
