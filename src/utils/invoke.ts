@@ -39,6 +39,10 @@ export async function remoteDetect(component: string): Promise<ProxyStatus> {
   return invoke('remote_detect', { component });
 }
 
+export async function remoteDetectAll(): Promise<ProxyStatus[]> {
+  return invoke('remote_detect_all');
+}
+
 export async function remoteEnable(
   component: string,
   config: ProxyConfig,
@@ -54,6 +58,10 @@ export async function remoteDisable(component: string): Promise<OpResult> {
 
 export async function localDetect(component: string): Promise<ProxyStatus> {
   return invoke('local_detect', { component });
+}
+
+export async function localDetectAll(): Promise<ProxyStatus[]> {
+  return invoke('local_detect_all');
 }
 
 export async function localEnable(

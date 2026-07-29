@@ -26,10 +26,12 @@ pub fn run() {
             commands::ssh_cmd::ssh_state,
             // Remote proxy commands
             commands::remote_proxy::remote_detect,
+            commands::remote_proxy::remote_detect_all,
             commands::remote_proxy::remote_enable,
             commands::remote_proxy::remote_disable,
             // Local proxy commands
             commands::local_proxy::local_detect,
+            commands::local_proxy::local_detect_all,
             commands::local_proxy::local_enable,
             commands::local_proxy::local_disable,
         ])

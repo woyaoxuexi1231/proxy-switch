@@ -36,6 +36,35 @@ pub fn remote_disable(
     })
 }
 
+#[tauri::command]
+pub fn remote_detect_all(
+    pool: State<'_, std::sync::Arc<ConnectionPool>>,
+) -> Result<Vec<ProxyStatus>, String> {
+    pool.with_session(|session| {
+        let all = ComponentId::remote_all();
+        let mut results = Vec::with_capacity(all.len());
+        for cid in &all {
+            match detect_remote(session, cid) {
+                Ok(status) => results.push(status),
+                Err(_e) => {
+                    results.push(ProxyStatus {
+                        component: *cid,
+                        installed: false,
+                        enabled: false,
+                        current_http_proxy: None,
+                        current_https_proxy: None,
+                        current_no_proxy: None,
+                        current_mirror: None,
+                        config_files: vec![],
+                        manual_setup_steps: vec![],
+                    });
+                }
+            }
+        }
+        Ok(results)
+    })
+}
+
 fn parse_component(s: &str) -> Result<ComponentId, String> {
     match s {
         "system_proxy" => Ok(ComponentId::SystemProxy),

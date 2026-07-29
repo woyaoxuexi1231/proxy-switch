@@ -3,7 +3,7 @@ import { useProxyStatus } from '../hooks/useProxyStatus';
 import { StatusIndicator } from './StatusIndicator';
 import { ManualGuide } from './ManualGuide';
 import { getProxyState } from '../types';
-import type { ComponentId, ProxyConfig } from '../types';
+import type { ComponentId, ProxyConfig, ProxyStatus } from '../types';
 import './ProxyCard.css';
 
 interface Props {
@@ -11,13 +11,12 @@ interface Props {
   label: string;
   isRemote: boolean;
   connected: boolean;
-  /** Delay (ms) before auto-detecting on mount. Only used for local components. */
-  autoDetectDelay?: number;
+  initialStatus?: ProxyStatus | null;
 }
 
-export function ProxyCard({ component, label, isRemote, connected, autoDetectDelay }: Props) {
+export function ProxyCard({ component, label, isRemote, connected, initialStatus }: Props) {
   const { status, loading, message, refresh, enable, disable, setMessage } =
-    useProxyStatus(component, isRemote);
+    useProxyStatus(component, isRemote, initialStatus);
   const [expanded, setExpanded] = useState(false);
 
   const [httpProxy, setHttpProxy] = useState('');
@@ -27,16 +26,6 @@ export function ProxyCard({ component, label, isRemote, connected, autoDetectDel
 
   const needsSudo = ['system_proxy', 'apt', 'docker_remote'].includes(component);
   const supportsMirror = ['apt', 'docker_remote', 'npm_remote', 'maven_remote'].includes(component);
-
-  // Auto-detect on mount for local components (staggered to avoid freezing)
-  useEffect(() => {
-    if (!isRemote && autoDetectDelay !== undefined) {
-      const timer = setTimeout(() => {
-        refresh();
-      }, autoDetectDelay);
-      return () => clearTimeout(timer);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-detect for remote components when SSH connects
   const prevConnected = useRef(connected);
