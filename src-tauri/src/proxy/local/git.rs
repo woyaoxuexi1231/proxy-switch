@@ -31,7 +31,7 @@ impl GitLocalModule {
     }
 
     pub fn detect(&self) -> bool {
-        find_in_path("git")
+        tool_installed("git")
     }
 
     pub fn status(&self) -> ProxyStatus {

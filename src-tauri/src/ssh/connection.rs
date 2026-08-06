@@ -113,9 +113,18 @@ impl SshSession {
         if sudo {
             use base64::Engine;
             let encoded = base64::engine::general_purpose::STANDARD.encode(content);
+            // Ensure the parent directory exists first — sudo tee won't create it.
+            // e.g. /etc/systemd/system/docker.service.d doesn't exist on a fresh
+            // Docker install, so writes would fail without this mkdir.
+            let mkdir = std::path::Path::new(path)
+                .parent()
+                .map(|p| p.to_string_lossy().to_string())
+                .filter(|d| !d.is_empty() && d != "/")
+                .map(|d| format!("sudo mkdir -p '{}' && ", d))
+                .unwrap_or_default();
             let cmd = format!(
-                "echo '{}' | base64 -d | sudo tee '{}' > /dev/null && sudo chmod 644 '{}'",
-                encoded, path, path
+                "{}echo '{}' | base64 -d | sudo tee '{}' > /dev/null && sudo chmod 644 '{}'",
+                mkdir, encoded, path, path
             );
             let result = self.run(&cmd, 15);
             if result.exit_code != 0 {

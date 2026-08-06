@@ -31,7 +31,7 @@ impl NpmLocalModule {
     }
 
     pub fn detect(&self) -> bool {
-        find_in_path("npm")
+        tool_installed("npm")
     }
 
     pub fn status(&self) -> ProxyStatus {
