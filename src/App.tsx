@@ -94,47 +94,51 @@ export default function App() {
             </Island>
           )}
 
-          <Island className="flex min-h-0 flex-1 flex-col">
+          <Island className="flex min-h-0 flex-[3] flex-col">
             <h2 className="shrink-0 px-4 pb-2 pt-3 font-display text-[12px] font-semibold text-[#0a1b33]">
               Remote
               <span className="ml-2 font-sans text-[11px] font-medium text-[#64748b]">
                 Ubuntu via SSH
               </span>
             </h2>
-            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
-              {REMOTE_COMPONENTS.map((comp) => (
-                <ProxyCard
-                  key={comp}
-                  component={comp}
-                  label={COMPONENT_LABELS[comp]}
-                  isRemote
-                  connected={connected}
-                  seedStatus={
-                    connected ? seedFor(comp, remoteStatuses) : null
-                  }
-                />
-              ))}
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+                {REMOTE_COMPONENTS.map((comp) => (
+                  <ProxyCard
+                    key={comp}
+                    component={comp}
+                    label={COMPONENT_LABELS[comp]}
+                    isRemote
+                    connected={connected}
+                    seedStatus={
+                      connected ? seedFor(comp, remoteStatuses) : null
+                    }
+                  />
+                ))}
+              </div>
             </div>
           </Island>
 
-          <Island className="flex min-h-0 flex-1 flex-col">
+          <Island className="flex shrink-0 flex-col">
             <h2 className="shrink-0 px-4 pb-2 pt-3 font-display text-[12px] font-semibold text-[#0a1b33]">
               Local
               <span className="ml-2 font-sans text-[11px] font-medium text-[#64748b]">
                 Windows
               </span>
             </h2>
-            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
-              {LOCAL_COMPONENTS.map((comp) => (
-                <ProxyCard
-                  key={comp}
-                  component={comp}
-                  label={COMPONENT_LABELS[comp]}
-                  isRemote={false}
-                  connected
-                  seedStatus={seedFor(comp, localStatuses)}
-                />
-              ))}
+            <div className="px-3 pb-3">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+                {LOCAL_COMPONENTS.map((comp) => (
+                  <ProxyCard
+                    key={comp}
+                    component={comp}
+                    label={COMPONENT_LABELS[comp]}
+                    isRemote={false}
+                    connected
+                    seedStatus={seedFor(comp, localStatuses)}
+                  />
+                ))}
+              </div>
             </div>
           </Island>
         </div>
