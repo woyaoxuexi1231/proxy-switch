@@ -1,20 +1,38 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { detectProxy, enableProxy, disableProxy } from '../utils/invoke';
-import type { ComponentId, ProxyConfig, ProxyStatus } from '../types';
+import type { ComponentId, OpResult, ProxyConfig, ProxyStatus } from '../types';
 
-export function useProxyStatus(component: ComponentId, isRemote: boolean) {
-  const [status, setStatus] = useState<ProxyStatus | null>(null);
+export function useProxyStatus(
+  component: ComponentId,
+  isRemote: boolean,
+  seedStatus?: ProxyStatus | null,
+) {
+  const [status, setStatus] = useState<ProxyStatus | null>(seedStatus ?? null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<OpResult | null>(null);
+
+  useEffect(() => {
+    if (seedStatus) {
+      setStatus(seedStatus);
+    } else if (isRemote && seedStatus === null) {
+      // Disconnect clears remote seed — drop stale status
+      setStatus(null);
+      setMessage(null);
+      setLastResult(null);
+    }
+  }, [seedStatus, isRemote]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setMessage(null);
+    setLastResult(null);
     try {
-      const s = await detectProxy(component, isRemote);
-      setStatus(s);
+      const next = await detectProxy(component, isRemote);
+      setStatus(next);
     } catch (e) {
       setMessage(String(e));
+      setLastResult({ success: false, message: String(e) });
     }
     setLoading(false);
   }, [component, isRemote]);
@@ -23,15 +41,22 @@ export function useProxyStatus(component: ComponentId, isRemote: boolean) {
     async (config: ProxyConfig) => {
       setLoading(true);
       setMessage(null);
+      setLastResult(null);
       try {
         const result = await enableProxy(component, config, isRemote);
+        setLastResult(result);
         setMessage(result.message);
-        const s = await detectProxy(component, isRemote);
-        setStatus(s);
+        const next = await detectProxy(component, isRemote);
+        setStatus(next);
+        return result;
       } catch (e) {
-        setMessage(String(e));
+        const fail: OpResult = { success: false, message: String(e) };
+        setLastResult(fail);
+        setMessage(fail.message);
+        return fail;
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     },
     [component, isRemote],
   );
@@ -39,16 +64,33 @@ export function useProxyStatus(component: ComponentId, isRemote: boolean) {
   const disable = useCallback(async () => {
     setLoading(true);
     setMessage(null);
+    setLastResult(null);
     try {
       const result = await disableProxy(component, isRemote);
+      setLastResult(result);
       setMessage(result.message);
-      const s = await detectProxy(component, isRemote);
-      setStatus(s);
+      const next = await detectProxy(component, isRemote);
+      setStatus(next);
+      return result;
     } catch (e) {
-      setMessage(String(e));
+      const fail: OpResult = { success: false, message: String(e) };
+      setLastResult(fail);
+      setMessage(fail.message);
+      return fail;
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [component, isRemote]);
 
-  return { status, loading, message, refresh, enable, disable, setMessage };
+  return {
+    status,
+    loading,
+    message,
+    lastResult,
+    refresh,
+    enable,
+    disable,
+    setMessage,
+    setLastResult,
+  };
 }

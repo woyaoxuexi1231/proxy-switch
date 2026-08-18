@@ -202,7 +202,7 @@ proxy-switch/
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
-└── DESIGN.md                     # Full design document
+└── docs/                         # Design, release, and engineering docs
 ```
 
 ### How It Works

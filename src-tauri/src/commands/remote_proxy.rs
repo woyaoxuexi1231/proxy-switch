@@ -1,68 +1,94 @@
 use crate::models::{ComponentId, OpResult, ProxyConfig, ProxyStatus};
-use crate::proxy::remote::{apt::AptModule, docker::DockerRemoteModule, git::GitRemoteModule,
-    maven::MavenRemoteModule, npm::NpmRemoteModule, system_proxy::SystemProxyModule};
+use crate::proxy::remote::{
+    apt::AptModule, docker::DockerRemoteModule, git::GitRemoteModule,
+    maven::MavenRemoteModule, npm::NpmRemoteModule, system_proxy::SystemProxyModule,
+};
 use crate::proxy::ProxyModule;
 use crate::ssh::connection::ConnectionPool;
+use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
-pub fn remote_detect(pool: State<'_, std::sync::Arc<ConnectionPool>>, component: String) -> Result<ProxyStatus, String> {
+pub async fn remote_detect(
+    pool: State<'_, Arc<ConnectionPool>>,
+    component: String,
+) -> Result<ProxyStatus, String> {
     let cid = parse_component(&component)?;
-    pool.with_session(|session| detect_remote(session, &cid))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        pool.with_session(|session| detect_remote(session, &cid))
+    })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
 }
 
 #[tauri::command]
-pub fn remote_enable(
-    pool: State<'_, std::sync::Arc<ConnectionPool>>,
+pub async fn remote_enable(
+    pool: State<'_, Arc<ConnectionPool>>,
     component: String,
     config: ProxyConfig,
 ) -> Result<OpResult, String> {
     let cid = parse_component(&component)?;
-    pool.with_session(|session| {
-        let module = get_module(&cid)?;
-        Ok(module.enable(session, &config))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        pool.with_session(|session| {
+            let module = get_module(&cid)?;
+            Ok(module.enable(session, &config))
+        })
     })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
 }
 
 #[tauri::command]
-pub fn remote_disable(
-    pool: State<'_, std::sync::Arc<ConnectionPool>>,
+pub async fn remote_disable(
+    pool: State<'_, Arc<ConnectionPool>>,
     component: String,
 ) -> Result<OpResult, String> {
     let cid = parse_component(&component)?;
-    pool.with_session(|session| {
-        let module = get_module(&cid)?;
-        Ok(module.disable(session))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        pool.with_session(|session| {
+            let module = get_module(&cid)?;
+            Ok(module.disable(session))
+        })
     })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
 }
 
 #[tauri::command]
-pub fn remote_detect_all(
-    pool: State<'_, std::sync::Arc<ConnectionPool>>,
+pub async fn remote_detect_all(
+    pool: State<'_, Arc<ConnectionPool>>,
 ) -> Result<Vec<ProxyStatus>, String> {
-    pool.with_session(|session| {
-        let all = ComponentId::remote_all();
-        let mut results = Vec::with_capacity(all.len());
-        for cid in &all {
-            match detect_remote(session, cid) {
-                Ok(status) => results.push(status),
-                Err(_e) => {
-                    results.push(ProxyStatus {
-                        component: *cid,
-                        installed: false,
-                        enabled: false,
-                        current_http_proxy: None,
-                        current_https_proxy: None,
-                        current_no_proxy: None,
-                        current_mirror: None,
-                        config_files: vec![],
-                        manual_setup_steps: vec![],
-                    });
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        pool.with_session(|session| {
+            let all = ComponentId::remote_all();
+            let mut results = Vec::with_capacity(all.len());
+            for cid in &all {
+                match detect_remote(session, cid) {
+                    Ok(status) => results.push(status),
+                    Err(_) => {
+                        results.push(ProxyStatus {
+                            component: *cid,
+                            installed: false,
+                            enabled: false,
+                            current_http_proxy: None,
+                            current_https_proxy: None,
+                            current_no_proxy: None,
+                            current_mirror: None,
+                            config_files: vec![],
+                            manual_setup_steps: vec![],
+                        });
+                    }
                 }
             }
-        }
-        Ok(results)
+            Ok(results)
+        })
     })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
 }
 
 fn parse_component(s: &str) -> Result<ComponentId, String> {
@@ -77,7 +103,10 @@ fn parse_component(s: &str) -> Result<ComponentId, String> {
     }
 }
 
-fn detect_remote(session: &crate::ssh::connection::SshSession, cid: &ComponentId) -> Result<ProxyStatus, String> {
+fn detect_remote(
+    session: &crate::ssh::connection::SshSession,
+    cid: &ComponentId,
+) -> Result<ProxyStatus, String> {
     let module = get_module(cid)?;
     let installed = module.detect(session);
     if !installed {

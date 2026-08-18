@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ManualStep } from '../types';
-import './ManualGuide.css';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { cn } from '../lib/cn';
 
 interface Props {
   steps: ManualStep[];
@@ -16,32 +17,47 @@ export function ManualGuide({ steps, defaultOpen = false }: Props) {
   if (steps.length === 0) return null;
 
   return (
-    <div className="manual-guide">
+    <div className="mt-3">
       <button
-        className="manual-toggle"
+        type="button"
+        className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-500 hover:text-[#0a1b33] transition-colors"
         onClick={() => setOpen(!open)}
       >
-        <span>{open ? '▾' : '▸'} How to configure manually</span>
+        {open ? (
+          <ChevronDown className="h-3.5 w-3.5" strokeWidth={2} />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
+        )}
+        How to configure manually
       </button>
       {open && (
-        <div className="manual-content">
+        <div className="mt-2 space-y-1 border-l border-slate-200 pl-3">
           {steps.map((step, i) => (
-            <div key={i} className="manual-step">
+            <div key={`${step.title}-${i}`}>
               <button
-                className="manual-step-toggle"
+                type="button"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-[#0a1b33] transition-colors"
                 onClick={() =>
                   setExpandedStep(expandedStep === i ? null : i)
                 }
               >
-                <span>
-                  {expandedStep === i ? '▾' : '▸'} {step.title}
-                </span>
+                {expandedStep === i ? (
+                  <ChevronDown className="h-3 w-3" strokeWidth={2} />
+                ) : (
+                  <ChevronRight className="h-3 w-3" strokeWidth={2} />
+                )}
+                {step.title}
               </button>
               {expandedStep === i && (
-                <pre className="manual-commands">
+                <pre
+                  className={cn(
+                    'mt-1.5 mb-2 overflow-x-auto rounded-lg bg-slate-50 px-3 py-2',
+                    'font-mono text-[11px] leading-relaxed text-[#0a1b33] whitespace-pre-wrap break-all',
+                  )}
+                >
                   {step.commands.map((cmd, j) => (
-                    <div key={j} className="manual-cmd-line">
-                      {cmd || ' '}
+                    <div key={j} className="min-h-[18px]">
+                      {cmd || '\u00a0'}
                     </div>
                   ))}
                 </pre>

@@ -139,7 +139,7 @@ proxy-switch/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
-└── DESIGN.md                        # 本文档
+└── docs/DESIGN.md                   # 本文档
 ```
 
 ---

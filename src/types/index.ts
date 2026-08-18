@@ -56,6 +56,43 @@ export const LOCAL_COMPONENTS: ComponentId[] = [
   'maven_local',
 ];
 
+/** Guide-only: detect/status/manual steps only — never write files. */
+export const GUIDE_ONLY_COMPONENTS: ComponentId[] = ['docker_local'];
+
+export const SUDO_COMPONENTS: ComponentId[] = [
+  'system_proxy',
+  'apt',
+  'docker_remote',
+];
+
+export const MIRROR_COMPONENTS: ComponentId[] = [
+  'apt',
+  'docker_remote',
+  'npm_remote',
+  'maven_remote',
+  'maven_local',
+];
+
+export const MAVEN_COMPONENTS: ComponentId[] = ['maven_local', 'maven_remote'];
+
+export const ALIYUN_MAVEN = 'https://maven.aliyun.com/repository/public';
+
+export function isGuideOnly(component: ComponentId): boolean {
+  return GUIDE_ONLY_COMPONENTS.includes(component);
+}
+
+export function needsSudo(component: ComponentId): boolean {
+  return SUDO_COMPONENTS.includes(component);
+}
+
+export function supportsMirror(component: ComponentId): boolean {
+  return MIRROR_COMPONENTS.includes(component);
+}
+
+export function isMavenComponent(component: ComponentId): boolean {
+  return MAVEN_COMPONENTS.includes(component);
+}
+
 export interface ManualStep {
   title: string;
   commands: string[];

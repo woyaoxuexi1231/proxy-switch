@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "Proxy Switch",
-        "width": 960,
-        "height": 720,
-        "minWidth": 780,
-        "minHeight": 600,
+        "width": 1180,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 680,
         "resizable": true,
         "center": true
       }
