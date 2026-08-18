@@ -42,7 +42,10 @@ impl ProxyModule for DockerRemoteModule {
         let content = session.read_file(DOCKER_CONF);
         let enabled = content.contains("HTTP_PROXY=");
         let mut proxy = None;
-        if let Some(cap) = regex::Regex::new(r#"HTTP_PROXY=(.+)"#).unwrap().captures(&content) {
+        if let Some(cap) = regex::Regex::new(r#"HTTP_PROXY=([^"\s]+)"#)
+            .unwrap()
+            .captures(&content)
+        {
             proxy = Some(cap[1].to_string());
         }
         let mut mirror = None;

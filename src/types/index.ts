@@ -66,7 +66,6 @@ export const SUDO_COMPONENTS: ComponentId[] = [
 ];
 
 export const MIRROR_COMPONENTS: ComponentId[] = [
-  'apt',
   'docker_remote',
   'npm_remote',
   'maven_remote',

@@ -72,6 +72,22 @@ pub struct ProxyStatus {
     pub manual_setup_steps: Vec<ManualStep>,
 }
 
+impl ProxyStatus {
+    pub fn blank(component: ComponentId) -> Self {
+        Self {
+            component,
+            installed: false,
+            enabled: false,
+            current_http_proxy: None,
+            current_https_proxy: None,
+            current_no_proxy: None,
+            current_mirror: None,
+            config_files: vec![],
+            manual_setup_steps: vec![],
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ManualStep {
     pub title: String,

@@ -106,10 +106,22 @@ impl ProxyModule for NpmRemoteModule {
 }
 
 fn npm_config_get(session: &SshSession, key: &str) -> String {
-    session
-        .run(
-            &format!("npm config get {} 2>/dev/null || echo ''", key),
-            5,
-        )
-        .stdout
+    normalize_npm_value(
+        &session
+            .run(
+                &format!("npm config get {} 2>/dev/null || echo ''", key),
+                5,
+            )
+            .stdout,
+    )
+}
+
+/// `npm config get` prints the literal string "null" for unset keys.
+fn normalize_npm_value(raw: &str) -> String {
+    let t = raw.trim().trim_matches('"').trim_matches('\'');
+    if t.is_empty() || t.eq_ignore_ascii_case("null") || t.eq_ignore_ascii_case("undefined") {
+        String::new()
+    } else {
+        t.to_string()
+    }
 }

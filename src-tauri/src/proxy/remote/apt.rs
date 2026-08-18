@@ -28,24 +28,17 @@ impl ProxyModule for AptModule {
     }
     fn status(&self, session: &SshSession) -> ProxyStatus {
         let content = session.read_file(APT_CONF);
-        let enabled = content.contains("Acquire::http::Proxy") || content.contains("Acquire::https::Proxy");
-        let mut proxy = None;
-        for line in content.lines() {
-            if line.contains("Acquire::http::Proxy") || line.contains("Acquire::https::Proxy") {
-                let re = regex::Regex::new(r#""(.*?)""#).unwrap();
-                if let Some(cap) = re.captures(&line) {
-                    proxy = Some(cap[1].to_string());
-                }
-                break;
-            }
-        }
+        let http = apt_proxy_value(&content, "Acquire::http::Proxy");
+        let https = apt_proxy_value(&content, "Acquire::https::Proxy");
+        let no_proxy = apt_proxy_value(&content, "Acquire::http::NoProxy");
+        let enabled = http.is_some() || https.is_some();
         ProxyStatus {
             component: ComponentId::Apt,
             installed: self.detect(session),
             enabled,
-            current_http_proxy: proxy.clone(),
-            current_https_proxy: proxy,
-            current_no_proxy: None,
+            current_http_proxy: http,
+            current_https_proxy: https,
+            current_no_proxy: no_proxy,
             current_mirror: None,
             config_files: self.config_files(),
             manual_setup_steps: self
@@ -93,4 +86,21 @@ fn proxy_content(config: &ProxyConfig) -> String {
     }
     lines.push(String::new());
     lines.join("\n")
+}
+
+fn apt_proxy_value(content: &str, key: &str) -> Option<String> {
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//") || !trimmed.contains(key) {
+            continue;
+        }
+        let re = regex::Regex::new(r#""(.*?)""#).unwrap();
+        if let Some(cap) = re.captures(trimmed) {
+            let val = cap[1].trim();
+            if !val.is_empty() {
+                return Some(val.to_string());
+            }
+        }
+    }
+    None
 }

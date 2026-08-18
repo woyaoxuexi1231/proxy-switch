@@ -49,36 +49,22 @@ pub async fn local_disable(component: String) -> Result<OpResult, String> {
 #[tauri::command]
 pub async fn local_detect_all() -> Result<Vec<ProxyStatus>, String> {
     tokio::task::spawn_blocking(move || {
+        crate::proxy::local::ensure_process_path();
+        let order = ComponentId::local_all();
         let handles = vec![
-            std::thread::spawn(|| (ComponentId::GitLocal, GitLocalModule::new().status())),
-            std::thread::spawn(|| (ComponentId::DockerLocal, DockerLocalModule::new().status())),
-            std::thread::spawn(|| (ComponentId::NpmLocal, NpmLocalModule::new().status())),
-            std::thread::spawn(|| (ComponentId::MavenLocal, MavenLocalModule::new().status())),
+            std::thread::spawn(|| GitLocalModule::new().status()),
+            std::thread::spawn(|| DockerLocalModule::new().status()),
+            std::thread::spawn(|| NpmLocalModule::new().status()),
+            std::thread::spawn(|| MavenLocalModule::new().status()),
         ];
-        let mut results: Vec<ProxyStatus> = handles
+        let results: Vec<ProxyStatus> = handles
             .into_iter()
-            .map(|h| h.join().map(|(_, s)| s).unwrap_or_else(|_| ProxyStatus {
-                component: ComponentId::GitLocal,
-                installed: false,
-                enabled: false,
-                current_http_proxy: None,
-                current_https_proxy: None,
-                current_no_proxy: None,
-                current_mirror: None,
-                config_files: vec![],
-                manual_setup_steps: vec![],
-            }))
+            .enumerate()
+            .map(|(i, h)| {
+                h.join()
+                    .unwrap_or_else(|_| ProxyStatus::blank(order[i]))
+            })
             .collect();
-        // Sort to match ComponentId::local_all() order
-        results.sort_by_key(|s| {
-            match s.component {
-                ComponentId::GitLocal => 0,
-                ComponentId::DockerLocal => 1,
-                ComponentId::NpmLocal => 2,
-                ComponentId::MavenLocal => 3,
-                _ => 4,
-            }
-        });
         Ok(results)
     })
     .await

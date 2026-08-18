@@ -115,13 +115,17 @@ fn read_gitconfig_proxy() -> (String, String) {
             let key = trimmed[..eq_pos].trim();
             let val = trimmed[eq_pos + 1..].trim();
             match current_section {
-                "http" if key.eq_ignore_ascii_case("proxy") => http = val.to_string(),
-                "https" if key.eq_ignore_ascii_case("proxy") => https = val.to_string(),
+                "http" if key.eq_ignore_ascii_case("proxy") => http = unquote(val),
+                "https" if key.eq_ignore_ascii_case("proxy") => https = unquote(val),
                 _ => {}
             }
         }
     }
     (http, https)
+}
+
+fn unquote(val: &str) -> String {
+    val.trim().trim_matches('"').trim_matches('\'').to_string()
 }
 
 // ── Command-line operations (for enable/disable, where process spawn is acceptable) ──

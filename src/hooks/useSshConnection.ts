@@ -8,6 +8,19 @@ import {
 } from '../utils/invoke';
 import type { ProxyStatus } from '../types';
 
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      await new Promise((r) => setTimeout(r, 300 * (i + 1)));
+    }
+  }
+  throw last;
+}
+
 export function useSshConnection() {
   const [connected, setConnected] = useState(false);
   const [serverName, setServerName] = useState<string | null>(null);
@@ -20,12 +33,8 @@ export function useSshConnection() {
   const [bulkDetecting, setBulkDetecting] = useState(false);
 
   const refreshLocalStatuses = useCallback(async () => {
-    try {
-      const statuses = await localDetectAll();
-      setLocalStatuses(statuses);
-    } catch (e) {
-      setError(String(e));
-    }
+    const statuses = await withRetry(() => localDetectAll());
+    setLocalStatuses(statuses);
   }, []);
 
   useEffect(() => {
@@ -41,6 +50,8 @@ export function useSshConnection() {
       setBulkDetecting(true);
       try {
         await refreshLocalStatuses();
+      } catch (e) {
+        setError(String(e));
       } finally {
         setBulkDetecting(false);
       }
@@ -58,7 +69,7 @@ export function useSshConnection() {
         setServerName(name);
         setBulkDetecting(true);
         try {
-          const statuses = await remoteDetectAll();
+          const statuses = await withRetry(() => remoteDetectAll());
           setRemoteStatuses(statuses);
         } catch (e) {
           setError(String(e));

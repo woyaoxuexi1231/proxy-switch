@@ -25,22 +25,26 @@ pub fn parse_host_port(url: &str) -> (String, String) {
 }
 
 pub fn find_proxy(xml: &str) -> (bool, Option<String>) {
-    if xml.trim().is_empty() {
+    if xml.trim().is_empty() || !xml.contains(PROXY_ID) {
         return (false, None);
     }
-    if !xml.contains(PROXY_ID) {
+    let re_block = regex::Regex::new(
+        r"(?s)<proxy>\s*<id>\s*proxy-switch-http\s*</id>.*?</proxy>",
+    )
+    .unwrap();
+    let Some(block) = re_block.find(xml).map(|m| m.as_str()) else {
         return (false, None);
-    }
+    };
     let re_active = regex::Regex::new(r"<active>\s*true\s*</active>").unwrap();
-    if !re_active.is_match(xml) {
+    if !re_active.is_match(block) {
         return (false, None);
     }
     let re_host = regex::Regex::new(r"<host>\s*([^<\s]+)\s*</host>").unwrap();
     let re_port = regex::Regex::new(r"<port>\s*(\d+)\s*</port>").unwrap();
     let re_proto = regex::Regex::new(r"<protocol>\s*([^<\s]+)\s*</protocol>").unwrap();
-    if let (Some(h), Some(p)) = (re_host.captures(xml), re_port.captures(xml)) {
+    if let (Some(h), Some(p)) = (re_host.captures(block), re_port.captures(block)) {
         let protocol = re_proto
-            .captures(xml)
+            .captures(block)
             .map(|c| c[1].to_string())
             .unwrap_or_else(|| "http".into());
         (true, Some(format!("{}://{}:{}", protocol, &h[1], &p[1])))
@@ -233,5 +237,30 @@ mod tests {
         let xml = remove_proxy(&xml);
         assert!(!xml.contains(PROXY_ID));
         assert!(xml.contains("maven.aliyun.com"));
+    }
+
+    #[test]
+    fn find_proxy_ignores_other_hosts() {
+        let xml = r#"<settings>
+  <mirrors>
+    <mirror>
+      <id>other</id>
+      <url>https://example.com/maven</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+  <proxies>
+    <proxy>
+      <id>proxy-switch-http</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>127.0.0.1</host>
+      <port>7890</port>
+    </proxy>
+  </proxies>
+</settings>"#;
+        let (enabled, proxy) = find_proxy(xml);
+        assert!(enabled);
+        assert_eq!(proxy.as_deref(), Some("http://127.0.0.1:7890"));
     }
 }

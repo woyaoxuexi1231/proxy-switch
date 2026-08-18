@@ -10,6 +10,10 @@ use ssh::connection::ConnectionPool;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Installer-launched processes inherit a stripped PATH. Rebuild it before
+    // any local git/npm/docker/mvn detection runs.
+    proxy::local::ensure_process_path();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(ConfigStore::new())

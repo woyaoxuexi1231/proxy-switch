@@ -39,25 +39,24 @@ impl ProxyModule for SystemProxyModule {
         true
     }
     fn status(&self, session: &SshSession) -> ProxyStatus {
-        let content = session.read_file(ENV_FILE);
-        let enabled = content.contains("http_proxy=") || content.contains("HTTP_PROXY=");
-        let mut proxy = None;
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.starts_with("http_proxy=") || trimmed.starts_with("HTTP_PROXY=") {
-                if let Some(val) = trimmed.splitn(2, '=').nth(1) {
-                    proxy = Some(val.trim_matches('"').trim_matches('\'').to_string());
-                }
-                break;
-            }
-        }
+        let env = session.read_file(ENV_FILE);
+        let profile = session.read_file(PROFILE_FILE);
+        let http = env_value(&env, "http_proxy")
+            .or_else(|| env_value(&env, "HTTP_PROXY"))
+            .or_else(|| env_value(&profile, "http_proxy"));
+        let https = env_value(&env, "https_proxy")
+            .or_else(|| env_value(&env, "HTTPS_PROXY"))
+            .or_else(|| env_value(&profile, "https_proxy"));
+        let no_proxy = env_value(&env, "no_proxy")
+            .or_else(|| env_value(&env, "NO_PROXY"))
+            .or_else(|| env_value(&profile, "no_proxy"));
         ProxyStatus {
             component: ComponentId::SystemProxy,
             installed: true,
-            enabled,
-            current_http_proxy: proxy.clone(),
-            current_https_proxy: proxy,
-            current_no_proxy: None,
+            enabled: http.is_some() || https.is_some(),
+            current_http_proxy: http,
+            current_https_proxy: https,
+            current_no_proxy: no_proxy,
             current_mirror: None,
             config_files: self.config_files(),
             manual_setup_steps: self
@@ -150,6 +149,28 @@ fn update_env_lines(existing: &str, config: &ProxyConfig) -> String {
     }
     new_lines.push(String::new());
     new_lines.join("\n")
+}
+
+fn env_value(content: &str, key: &str) -> Option<String> {
+    let prefix = format!("{key}=");
+    let export_prefix = format!("export {key}=");
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let rest = if let Some(r) = trimmed.strip_prefix(&export_prefix) {
+            Some(r)
+        } else if let Some(r) = trimmed.strip_prefix(&prefix) {
+            Some(r)
+        } else {
+            None
+        };
+        if let Some(rest) = rest {
+            let val = rest.trim().trim_matches('"').trim_matches('\'').to_string();
+            if !val.is_empty() {
+                return Some(val);
+            }
+        }
+    }
+    None
 }
 
 fn make_profile_content(config: &ProxyConfig) -> String {

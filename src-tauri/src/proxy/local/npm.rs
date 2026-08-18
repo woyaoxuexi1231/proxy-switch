@@ -105,13 +105,22 @@ fn read_npmrc_proxy() -> (String, String) {
             let key = trimmed[..eq_pos].trim();
             let val = trimmed[eq_pos + 1..].trim();
             match key {
-                "proxy" => proxy = val.to_string(),
-                "https-proxy" => https_proxy = val.to_string(),
+                "proxy" => proxy = unquote(val),
+                "https-proxy" => https_proxy = unquote(val),
                 _ => {}
             }
         }
     }
     (proxy, https_proxy)
+}
+
+fn unquote(val: &str) -> String {
+    let t = val.trim().trim_matches('"').trim_matches('\'');
+    if t.eq_ignore_ascii_case("null") || t.eq_ignore_ascii_case("undefined") {
+        String::new()
+    } else {
+        t.to_string()
+    }
 }
 
 // ── Command-line operations (for enable/disable) ───────────────────────────

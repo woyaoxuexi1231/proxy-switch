@@ -69,19 +69,7 @@ pub async fn remote_detect_all(
             for cid in &all {
                 match detect_remote(session, cid) {
                     Ok(status) => results.push(status),
-                    Err(_) => {
-                        results.push(ProxyStatus {
-                            component: *cid,
-                            installed: false,
-                            enabled: false,
-                            current_http_proxy: None,
-                            current_https_proxy: None,
-                            current_no_proxy: None,
-                            current_mirror: None,
-                            config_files: vec![],
-                            manual_setup_steps: vec![],
-                        });
-                    }
+                    Err(_) => results.push(ProxyStatus::blank(*cid)),
                 }
             }
             Ok(results)
