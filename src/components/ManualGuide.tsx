@@ -4,11 +4,14 @@ import './ManualGuide.css';
 
 interface Props {
   steps: ManualStep[];
+  defaultOpen?: boolean;
 }
 
-export function ManualGuide({ steps }: Props) {
-  const [open, setOpen] = useState(false);
-  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+export function ManualGuide({ steps, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
+  const [expandedStep, setExpandedStep] = useState<number | null>(
+    defaultOpen ? 0 : null,
+  );
 
   if (steps.length === 0) return null;
 

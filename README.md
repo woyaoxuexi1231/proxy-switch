@@ -24,15 +24,15 @@ Configuring proxies is **tedious**. Every tool has its own config file, its own 
 | **Git** | `git config --global` | No |
 | **Docker** | systemd drop-in + `daemon.json` (mirrors) | Yes |
 | **npm** | `npm config set` | No |
-| **Maven** | `~/.m2/settings.xml` | No |
+| **Maven** | `~/.m2/settings.xml`（含阿里云镜像） | No |
 
 ### 🖥 Local (Windows)
 | Component | Config Mechanism |
 |---|---|
 | **Git** | `git config --global` |
-| **Docker** | `%USERPROFILE%\.docker\daemon.json` |
+| **Docker** | Docker Desktop → Settings → Resources → Proxies（仅指引，不写配置） |
 | **npm** | `npm config set` |
-| **Maven** | `%USERPROFILE%\.m2\settings.xml` |
+| **Maven** | `%USERPROFILE%\.m2\settings.xml`（含阿里云镜像） |
 
 ### Core capabilities
 - **Auto-detect** — local components are detected on app launch; remote components are detected automatically when an SSH connection is established
@@ -207,7 +207,7 @@ proxy-switch/
 
 ### How It Works
 
-1. **Local detection** — On Windows, the Rust backend spawns child processes (`git config --get`, `npm config get`, etc.) or reads config files (`daemon.json`, `settings.xml`) directly from the filesystem.
+1. **Local detection** — On Windows, the Rust backend spawns child processes (`git config --get`, `npm config get`, etc.) or reads config files (`settings.xml`) directly from the filesystem.
 2. **Remote detection** — Through an SSH session (managed by a connection pool), the backend executes commands on the remote Ubuntu server (`cat /etc/environment`, `git config --global --get`, `npm config get`, etc.) or reads files via SFTP/base64 piping.
 3. **Enabling/disabling** — For each component, the backend applies the appropriate configuration: writing files (SFTP for user-owned, base64 + `sudo tee` for root-owned), running CLI commands, or modifying XML/JSON configs.
 4. **Connection pool** — Only one SSH connection is active at a time (simplifies state management). The pool is protected by a `Mutex` for thread safety.

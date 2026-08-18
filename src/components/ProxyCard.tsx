@@ -6,6 +6,10 @@ import { getProxyState } from '../types';
 import type { ComponentId, ProxyConfig } from '../types';
 import './ProxyCard.css';
 
+const ALIYUN_MAVEN = 'https://maven.aliyun.com/repository/public';
+const GUIDE_ONLY = ['docker_local'];
+const MAVEN_COMPONENTS = ['maven_local', 'maven_remote'];
+
 interface Props {
   component: ComponentId;
   label: string;
@@ -24,16 +28,23 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
   const [mirror, setMirror] = useState('');
 
   const needsSudo = ['system_proxy', 'apt', 'docker_remote'].includes(component);
-  const supportsMirror = ['apt', 'docker_remote', 'npm_remote', 'maven_remote'].includes(component);
+  const supportsMirror = [
+    'apt',
+    'docker_remote',
+    'npm_remote',
+    'maven_remote',
+    'maven_local',
+  ].includes(component);
+  const isMaven = MAVEN_COMPONENTS.includes(component);
+  const guideOnly = GUIDE_ONLY.includes(component);
 
   // Fill form from detected status
   useEffect(() => {
-    if (status?.enabled) {
-      if (status.current_http_proxy && !httpProxy) setHttpProxy(status.current_http_proxy);
-      if (status.current_https_proxy && !httpsProxy) setHttpsProxy(status.current_https_proxy);
-      if (status.current_no_proxy && !noProxy) setNoProxy(status.current_no_proxy);
-      if (status.current_mirror && !mirror) setMirror(status.current_mirror);
-    }
+    if (!status) return;
+    if (status.current_http_proxy && !httpProxy) setHttpProxy(status.current_http_proxy);
+    if (status.current_https_proxy && !httpsProxy) setHttpsProxy(status.current_https_proxy);
+    if (status.current_no_proxy && !noProxy) setNoProxy(status.current_no_proxy);
+    if (status.current_mirror && !mirror) setMirror(status.current_mirror);
   }, [status]);
 
   const handleRefresh = useCallback(() => {
@@ -42,8 +53,12 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
   }, [refresh, setMessage]);
 
   const handleEnable = useCallback(async () => {
-    if (!httpProxy && !httpsProxy) {
-      setMessage('At least one proxy URL is required.');
+    if (!httpProxy && !httpsProxy && !(supportsMirror && mirror)) {
+      setMessage(
+        supportsMirror
+          ? 'Enter a proxy URL or a mirror URL.'
+          : 'At least one proxy URL is required.',
+      );
       return;
     }
     setMessage(null);
@@ -54,14 +69,29 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
       mirror: mirror.trim(),
     };
     await enable(config);
-  }, [httpProxy, httpsProxy, noProxy, mirror, enable, setMessage]);
+  }, [httpProxy, httpsProxy, noProxy, mirror, enable, setMessage, supportsMirror]);
+
+  const handleAliyunMirror = useCallback(async () => {
+    setMirror(ALIYUN_MAVEN);
+    setMessage(null);
+    await enable({
+      http_proxy: '',
+      https_proxy: '',
+      no_proxy: '',
+      mirror: ALIYUN_MAVEN,
+    });
+  }, [enable, setMessage]);
 
   const handleDisable = useCallback(async () => {
     setMessage(null);
     await disable();
   }, [disable, setMessage]);
 
-  const proxyDisplay = status?.current_https_proxy || status?.current_http_proxy || null;
+  const proxyDisplay =
+    status?.current_https_proxy ||
+    status?.current_http_proxy ||
+    status?.current_mirror ||
+    null;
 
   return (
     <div className={`proxy-card${expanded ? ' expanded' : ''}`}>
@@ -77,7 +107,8 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
         >
           <StatusIndicator status={status} loading={loading} />
           <span className="proxy-card-label">{label}</span>
-          {proxyDisplay && getProxyState(status) === 'started' && (
+          {proxyDisplay &&
+            (getProxyState(status) === 'started' || !!status?.current_mirror) && (
             <span className="proxy-card-value">{proxyDisplay}</span>
           )}
           <span className={`proxy-card-chevron${expanded ? ' up' : ''}`}>
@@ -111,7 +142,10 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
 
           {/* Manual guide */}
           {status?.manual_setup_steps && (
-            <ManualGuide steps={status.manual_setup_steps} />
+            <ManualGuide
+              steps={status.manual_setup_steps}
+              defaultOpen={guideOnly}
+            />
           )}
 
           {/* Message */}
@@ -127,6 +161,7 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
           )}
 
           {/* Input fields */}
+          {!guideOnly && (
           <div className="proxy-inputs">
             <div className="proxy-field">
               <label className="proxy-field-label">HTTP Proxy</label>
@@ -160,19 +195,25 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
             </div>
             {supportsMirror && (
               <div className="proxy-field">
-                <label className="proxy-field-label">Mirror URL</label>
+                <label className="proxy-field-label">
+                  {isMaven ? 'Maven Mirror' : 'Mirror URL'}
+                </label>
                 <input
                   className="proxy-input"
                   type="text"
-                  placeholder="https://mirror.example.com"
+                  placeholder={
+                    isMaven ? ALIYUN_MAVEN : 'https://mirror.example.com'
+                  }
                   value={mirror}
                   onChange={(e) => setMirror(e.target.value)}
                 />
               </div>
             )}
           </div>
+          )}
 
           {/* Action buttons */}
+          {!guideOnly && (
           <div className="proxy-actions">
             <button
               className="btn btn-primary"
@@ -181,6 +222,16 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
             >
               Apply
             </button>
+            {isMaven && (
+              <button
+                className="btn"
+                onClick={handleAliyunMirror}
+                disabled={loading}
+                title={ALIYUN_MAVEN}
+              >
+                Aliyun mirror
+              </button>
+            )}
             <button
               className="btn btn-danger-outline"
               onClick={handleDisable}
@@ -192,6 +243,7 @@ export function ProxyCard({ component, label, isRemote, connected }: Props) {
               <span className="sudo-tag">sudo</span>
             )}
           </div>
+          )}
         </div>
       )}
     </div>

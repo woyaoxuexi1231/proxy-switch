@@ -168,7 +168,8 @@
   gap: 2px;
 }
 
-.proxy-field:nth-child(3) {
+.proxy-field:nth-child(3),
+.proxy-field:nth-child(4) {
   grid-column: 1 / -1;
 }
 

@@ -12,4 +12,5 @@ pub trait ProxyModule: Send + Sync {
 }
 
 pub mod local;
+pub mod maven_xml;
 pub mod remote;

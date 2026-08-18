@@ -1,6 +1,29 @@
 use super::*;
 use crate::models::{ComponentId, ManualStep, OpResult, ProxyConfig, ProxyStatus};
+use serde_json::{Map, Value};
 use std::fs;
+use std::path::{Path, PathBuf};
+
+/// Docker Desktop proxy is only applied from its own Settings UI.
+/// This module never writes Docker files; it only reads status and shows steps.
+const MODE_KEYS: &[&str] = &["ProxyHTTPMode", "proxyHttpMode", "ProxyHttpMode"];
+const HTTP_KEYS: &[&str] = &[
+    "OverrideProxyHTTP",
+    "overrideProxyHttp",
+    "OverrideProxyHttp",
+];
+const HTTPS_KEYS: &[&str] = &[
+    "OverrideProxyHTTPS",
+    "overrideProxyHttps",
+    "OverrideProxyHttps",
+];
+const EXCLUDE_KEYS: &[&str] = &["OverrideProxyExclude", "overrideProxyExclude"];
+
+const GUIDE_MESSAGE: &str = "\
+Docker Desktop proxy is not changed by this app. \
+Open Docker Desktop → Settings → Resources → Proxies → Manual proxy configuration, \
+enter your HTTP/HTTPS URL, then Apply & Restart. \
+docker info will still show http.docker.internal:3128 — that is Desktop's internal proxy.";
 
 pub struct DockerLocalModule;
 
@@ -9,31 +32,27 @@ impl DockerLocalModule {
         Self
     }
 
-
-
     pub fn config_files(&self) -> Vec<String> {
-        vec!["%USERPROFILE%\\.docker\\daemon.json".into()]
+        vec!["Docker Desktop → Settings → Resources → Proxies".into()]
     }
 
     pub fn manual_steps(&self) -> Vec<(String, Vec<String>)> {
         vec![(
-            "Configure Docker proxy on Windows".into(),
+            "Set proxy in Docker Desktop".into(),
             vec![
-                "Method 1 — Docker Desktop GUI:".into(),
-                "Settings → Resources → Proxies".into(),
-                "Fill in HTTP/HTTPS proxy → Apply & Restart".into(),
+                "1. Open Docker Desktop".into(),
+                "2. Settings → Resources → Proxies".into(),
+                "3. Choose Manual proxy configuration".into(),
+                "4. HTTP  = http://127.0.0.1:7890".into(),
+                "   HTTPS = http://127.0.0.1:7890".into(),
+                "5. Apply & Restart".into(),
                 String::new(),
-                "Method 2 — Edit daemon.json:".into(),
-                "%USERPROFILE%\\.docker\\daemon.json".into(),
-                "{".into(),
-                "  \"proxies\": {".into(),
-                "    \"default\": {".into(),
-                "      \"httpProxy\": \"http://your-proxy:port\",".into(),
-                "      \"httpsProxy\": \"http://your-proxy:port\",".into(),
-                "      \"noProxy\": \"localhost,127.0.0.1\"".into(),
-                "    }".into(),
-                "  }".into(),
-                "}".into(),
+                "docker info will still show:".into(),
+                "  HTTP Proxy: http.docker.internal:3128".into(),
+                "That is Docker Desktop's internal proxy, not a misconfiguration.".into(),
+                "It forwards to the URL you entered in the GUI.".into(),
+                String::new(),
+                "Do not edit daemon.json for proxy — Docker Desktop ignores it.".into(),
             ],
         )]
     }
@@ -42,19 +61,8 @@ impl DockerLocalModule {
         tool_installed("docker")
     }
 
-    fn daemon_path() -> Option<std::path::PathBuf> {
-        dirs::home_dir().map(|h| h.join(".docker").join("daemon.json"))
-    }
-
     pub fn status(&self) -> ProxyStatus {
-        let (enabled, http, https, no_proxy) = read_daemon_proxies();
-        let _proxy = if let Some(ref h) = https {
-            Some(h.clone())
-        } else if let Some(ref h) = http {
-            Some(h.clone())
-        } else {
-            None
-        };
+        let (enabled, http, https, no_proxy) = read_desktop_proxies();
         ProxyStatus {
             component: ComponentId::DockerLocal,
             installed: self.detect(),
@@ -75,117 +83,108 @@ impl DockerLocalModule {
         }
     }
 
-    pub fn enable(&self, config: &ProxyConfig) -> OpResult {
-        let path = match Self::daemon_path() {
-            Some(p) => p,
-            None => return OpResult::err("Cannot find home directory"),
-        };
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).ok();
-        }
-        let mut daemon: serde_json::Value = if path.exists() {
-            let content = fs::read_to_string(&path).unwrap_or_default();
-            serde_json::from_str(&content).unwrap_or(serde_json::Value::Object(
-                serde_json::Map::new(),
-            ))
-        } else {
-            serde_json::Value::Object(serde_json::Map::new())
-        };
-        let mut proxies = serde_json::Map::new();
-        let mut default_proxy = serde_json::Map::new();
-        if !config.http_proxy.is_empty() {
-            default_proxy.insert(
-                "httpProxy".into(),
-                serde_json::Value::String(config.http_proxy.clone()),
-            );
-        }
-        if !config.https_proxy.is_empty() {
-            default_proxy.insert(
-                "httpsProxy".into(),
-                serde_json::Value::String(config.https_proxy.clone()),
-            );
-        }
-        if !config.no_proxy.is_empty() {
-            default_proxy.insert(
-                "noProxy".into(),
-                serde_json::Value::String(config.no_proxy.clone()),
-            );
-        }
-        proxies.insert(
-            "default".into(),
-            serde_json::Value::Object(default_proxy),
-        );
-        if let Some(obj) = daemon.as_object_mut() {
-            obj.insert(
-                "proxies".into(),
-                serde_json::Value::Object(proxies),
-            );
-        }
-        let content = serde_json::to_string_pretty(&daemon).unwrap_or_default();
-        match fs::write(&path, &content) {
-            Ok(_) => OpResult::ok("Docker proxy configured. Restart Docker Desktop to apply."),
-            Err(e) => OpResult::err(format!("Failed to write daemon.json: {}", e)),
-        }
+    pub fn enable(&self, _config: &ProxyConfig) -> OpResult {
+        OpResult::ok(GUIDE_MESSAGE)
     }
 
     pub fn disable(&self) -> OpResult {
-        let path = match Self::daemon_path() {
-            Some(p) => p,
-            None => return OpResult::err("Cannot find home directory"),
-        };
-        if !path.exists() {
-            return OpResult::ok("No Docker config to disable");
-        }
-        let content = fs::read_to_string(&path).unwrap_or_default();
-        let mut daemon: serde_json::Value = serde_json::from_str(&content)
-            .unwrap_or(serde_json::Value::Object(serde_json::Map::new()));
-        if let Some(obj) = daemon.as_object_mut() {
-            obj.remove("proxies");
-        }
-        let content = serde_json::to_string_pretty(&daemon).unwrap_or_default();
-        match fs::write(&path, &content) {
-            Ok(_) => OpResult::ok("Docker proxy removed. Restart Docker Desktop to apply."),
-            Err(e) => OpResult::err(format!("Failed to write daemon.json: {}", e)),
-        }
+        OpResult::ok(
+            "Disable proxy in Docker Desktop: Settings → Resources → Proxies → No proxy (or Manual with empty URLs), then Apply & Restart.",
+        )
     }
 }
 
-fn read_daemon_proxies() -> (
-    bool,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-) {
-    let path = match dirs::home_dir() {
-        Some(h) => h.join(".docker").join("daemon.json"),
-        None => return (false, None, None, None),
+fn desktop_settings_paths() -> Vec<PathBuf> {
+    let Some(appdata) = dirs::config_dir() else {
+        return Vec::new();
     };
-    if !path.exists() {
-        return (false, None, None, None);
+    let dir = appdata.join("Docker");
+    ["settings-store.json", "settings.json"]
+        .into_iter()
+        .map(|name| dir.join(name))
+        .filter(|p| p.exists())
+        .collect()
+}
+
+fn read_json(path: &Path) -> Option<Value> {
+    let content = fs::read_to_string(path).ok()?;
+    serde_json::from_str(&content).ok()
+}
+
+fn nonempty(s: &Option<String>) -> bool {
+    s.as_ref().map(|v| !v.is_empty()).unwrap_or(false)
+}
+
+fn json_str_value(value: Option<&Value>) -> Option<String> {
+    match value {
+        Some(Value::String(s)) if !s.is_empty() => Some(s.clone()),
+        _ => None,
     }
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return (false, None, None, None),
-    };
-    let cfg: serde_json::Value = match serde_json::from_str(&content) {
-        Ok(v) => v,
-        Err(_) => return (false, None, None, None),
-    };
-    let default = cfg
-        .get("proxies")
-        .and_then(|p| p.get("default"));
-    let enabled = default.is_some();
-    let http = default
-        .and_then(|d| d.get("httpProxy"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let https = default
-        .and_then(|d| d.get("httpsProxy"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    let no_proxy = default
-        .and_then(|d| d.get("noProxy"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-    (enabled, http, https, no_proxy)
+}
+
+fn json_str(obj: &Map<String, Value>, keys: &[&str]) -> Option<String> {
+    for key in keys {
+        if let Some(v) = json_str_value(obj.get(*key)) {
+            return Some(v);
+        }
+    }
+    None
+}
+
+fn json_exclude(obj: &Map<String, Value>) -> Option<String> {
+    match obj.get("exclude") {
+        Some(Value::String(s)) if !s.is_empty() => Some(s.clone()),
+        Some(Value::Array(items)) => {
+            let joined = items
+                .iter()
+                .filter_map(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<_>>()
+                .join(",");
+            if joined.is_empty() {
+                None
+            } else {
+                Some(joined)
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Read-only: show whatever Docker Desktop currently has configured.
+fn read_desktop_proxies() -> (bool, Option<String>, Option<String>, Option<String>) {
+    for path in desktop_settings_paths() {
+        let Some(value) = read_json(&path) else {
+            continue;
+        };
+        let Some(obj) = value.as_object() else {
+            continue;
+        };
+        let mut mode = json_str(obj, MODE_KEYS).unwrap_or_default();
+        let mut http = json_str(obj, HTTP_KEYS);
+        let mut https = json_str(obj, HTTPS_KEYS);
+        let mut no_proxy = json_str(obj, EXCLUDE_KEYS);
+        if let Some(proxy) = obj.get("proxy").and_then(|p| p.as_object()) {
+            if mode.is_empty() {
+                mode = json_str(proxy, &["mode"]).unwrap_or_default();
+            }
+            if http.is_none() {
+                http = json_str(proxy, &["http"]);
+            }
+            if https.is_none() {
+                https = json_str(proxy, &["https"]);
+            }
+            if no_proxy.is_none() {
+                no_proxy = json_exclude(proxy);
+            }
+        }
+        if mode.is_empty() && http.is_none() && https.is_none() {
+            continue;
+        }
+        let enabled = mode != "system"
+            && mode != "disabled"
+            && (nonempty(&http) || nonempty(&https));
+        return (enabled, http, https, no_proxy);
+    }
+    (false, None, None, None)
 }
