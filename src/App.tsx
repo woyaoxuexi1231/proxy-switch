@@ -1,9 +1,8 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ProxyCard } from './components/ProxyCard';
 import { ServerDialog } from './components/ServerDialog';
-import { HeroLanding } from './components/HeroLanding';
-import { LogoMarquee } from './components/LogoMarquee';
+import { Island } from './components/Island';
 import { useSshConnection } from './hooks/useSshConnection';
 import { useServers } from './hooks/useServers';
 import {
@@ -22,7 +21,6 @@ export default function App() {
   } = useServers();
   const [showServerDialog, setShowServerDialog] = useState(false);
   const [editingServer, setEditingServer] = useState<Server | null>(null);
-  const workspaceRef = useRef<HTMLElement>(null);
   const {
     connected,
     serverName,
@@ -51,10 +49,6 @@ export default function App() {
     void loadServers();
   };
 
-  const scrollToWorkspace = () => {
-    workspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   const seedFor = (
     component: ComponentId,
     list: ProxyStatus[] | null,
@@ -64,103 +58,86 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f9fafb] text-[#0a1b33]">
-      <div className="px-4 pb-16 pt-6 md:px-8 md:pt-10">
-        <HeroLanding
-          onContact={scrollToWorkspace}
-          onProducts={scrollToWorkspace}
-          onDocs={scrollToWorkspace}
-        />
-        <LogoMarquee />
+    <div className="flex h-screen min-h-0 bg-[#f9fafb] p-2.5 text-[#0a1b33]">
+      <div className="grid min-h-0 flex-1 grid-cols-[248px_1fr] gap-2.5">
+        <Island className="flex flex-col">
+          <Sidebar
+            servers={servers}
+            connected={connected}
+            serverName={serverName}
+            connLoading={connLoading}
+            connError={connError}
+            onConnect={(name) => void connect(name)}
+            onDisconnect={() => void disconnect()}
+            onAddServer={handleAddServer}
+            onEditServer={handleEditServer}
+            onDeleteServer={(name) => void removeServer(name)}
+          />
+        </Island>
 
-        <section
-          ref={workspaceRef}
-          id="workspace"
-          className="mx-auto mt-12 w-full max-w-[1400px] overflow-hidden rounded-[32px] border border-slate-200/60 bg-white shadow-[0_24px_80px_-28px_rgba(0,0,0,0.08)]"
-        >
-          <div className="grid min-h-[640px] grid-cols-1 md:grid-cols-[260px_1fr]">
-            <Sidebar
-              servers={servers}
-              connected={connected}
-              serverName={serverName}
-              connLoading={connLoading}
-              connError={connError}
-              onConnect={(name) => void connect(name)}
-              onDisconnect={() => void disconnect()}
-              onAddServer={handleAddServer}
-              onEditServer={handleEditServer}
-              onDeleteServer={(name) => void removeServer(name)}
-            />
+        <div className="flex min-h-0 flex-col gap-2.5">
+          <Island className="shrink-0 px-4 py-3">
+            <div className="font-display text-[13px] font-semibold tracking-tight text-[#0a1b33]">
+              Workspace
+            </div>
+            <div className="mt-0.5 font-mono text-[11px] text-[#64748b]">
+              {connected
+                ? `Connected: ${serverName}`
+                : 'Not connected to a remote server'}
+              {bulkDetecting ? ' · Detecting...' : ''}
+            </div>
+          </Island>
 
-            <main className="flex min-h-0 flex-col bg-[#fbfcfd]">
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 px-5 py-3">
-                <div>
-                  <div className="text-[13px] font-semibold text-[#0a1b33]">
-                    Proxy workspace
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    {connected
-                      ? `Connected: ${serverName}`
-                      : 'Not connected to a remote server'}
-                    {bulkDetecting ? ' · Detecting…' : ''}
-                  </div>
-                </div>
-              </div>
+          {(serversError || connError) && (
+            <Island className="shrink-0 bg-red-50 px-4 py-2.5 text-[12px] text-red-700">
+              {serversError || connError}
+            </Island>
+          )}
 
-              {(serversError || connError) && (
-                <div className="mx-5 mt-4 rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">
-                  {serversError || connError}
-                </div>
-              )}
+          <Island className="flex min-h-0 flex-1 flex-col">
+            <h2 className="shrink-0 px-4 pb-2 pt-3 font-display text-[12px] font-semibold text-[#0a1b33]">
+              Remote
+              <span className="ml-2 font-sans text-[11px] font-medium text-[#64748b]">
+                Ubuntu via SSH
+              </span>
+            </h2>
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
+              {REMOTE_COMPONENTS.map((comp) => (
+                <ProxyCard
+                  key={comp}
+                  component={comp}
+                  label={COMPONENT_LABELS[comp]}
+                  isRemote
+                  connected={connected}
+                  seedStatus={
+                    connected ? seedFor(comp, remoteStatuses) : null
+                  }
+                />
+              ))}
+            </div>
+          </Island>
 
-              <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-                <section>
-                  <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Remote (Ubuntu via SSH)
-                  </h2>
-                  <div className="space-y-2">
-                    {REMOTE_COMPONENTS.map((comp) => (
-                      <ProxyCard
-                        key={comp}
-                        component={comp}
-                        label={COMPONENT_LABELS[comp]}
-                        isRemote
-                        connected={connected}
-                        seedStatus={
-                          connected
-                            ? seedFor(comp, remoteStatuses)
-                            : null
-                        }
-                      />
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    Local (Windows)
-                  </h2>
-                  <div className="space-y-2">
-                    {LOCAL_COMPONENTS.map((comp) => (
-                      <ProxyCard
-                        key={comp}
-                        component={comp}
-                        label={COMPONENT_LABELS[comp]}
-                        isRemote={false}
-                        connected
-                        seedStatus={seedFor(comp, localStatuses)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              </div>
-
-              <footer className="border-t border-slate-200/70 px-5 py-2 text-[11px] text-slate-500">
-                {connected ? `Connected: ${serverName}` : 'Not connected'}
-              </footer>
-            </main>
-          </div>
-        </section>
+          <Island className="flex min-h-0 flex-1 flex-col">
+            <h2 className="shrink-0 px-4 pb-2 pt-3 font-display text-[12px] font-semibold text-[#0a1b33]">
+              Local
+              <span className="ml-2 font-sans text-[11px] font-medium text-[#64748b]">
+                Windows
+              </span>
+            </h2>
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
+              {LOCAL_COMPONENTS.map((comp) => (
+                <ProxyCard
+                  key={comp}
+                  component={comp}
+                  label={COMPONENT_LABELS[comp]}
+                  isRemote={false}
+                  connected
+                  seedStatus={seedFor(comp, localStatuses)}
+                />
+              ))}
+            </div>
+          </Island>
+        </div>
       </div>
 
       {showServerDialog && (

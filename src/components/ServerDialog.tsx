@@ -84,7 +84,7 @@ export function ServerDialog({ server, onSaved, onCancel }: Props) {
         aria-label={server ? 'Edit Server' : 'Add Server'}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h2 className="text-[16px] font-semibold text-[#0a1b33]">
+          <h2 className="font-display text-[16px] font-semibold text-[#0a1b33]">
             {server ? 'Edit Server' : 'Add Server'}
           </h2>
           <button

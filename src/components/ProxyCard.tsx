@@ -137,8 +137,8 @@ export function ProxyCard({
   return (
     <div
       className={cn(
-        'rounded-2xl border border-slate-200/70 bg-white transition-shadow',
-        expanded && 'shadow-[0_8px_30px_rgba(15,23,42,0.04)]',
+        'rounded-[12px] bg-[#f9fafb] transition-colors',
+        expanded && 'bg-[#f3f5f8]',
       )}
     >
       <div className="flex items-center justify-between gap-2 px-4 py-2.5">
@@ -152,7 +152,7 @@ export function ProxyCard({
           title={connected ? 'Click to expand' : 'Not connected'}
         >
           <StatusIndicator status={status} loading={loading} />
-          <span className="truncate text-[13px] font-semibold text-[#0a1b33]">
+          <span className="truncate font-display text-[13px] font-semibold text-[#0a1b33]">
             {label}
           </span>
           {proxyDisplay &&
@@ -186,7 +186,7 @@ export function ProxyCard({
       </div>
 
       {expanded && (
-        <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+        <div className="border-t border-slate-200/60 px-4 pb-4 pt-3">
           {status?.config_files && status.config_files.length > 0 && (
             <div className="mb-2">
               <div className="mb-1 text-[11px] font-medium text-slate-400">
