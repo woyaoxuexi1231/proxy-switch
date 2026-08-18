@@ -1,22 +1,25 @@
-# 🔌 Proxy Switch
+# Proxy Switch
 
-> **A desktop app to manage proxy settings across local Windows and remote Linux servers — all from one clean interface.**
+> **A desktop app to manage proxy settings across local Windows and remote Ubuntu servers — from one clean interface.**
 
 [Features](#features) · [Installation](#installation) · [Usage](#usage) · [Architecture](#architecture) · [Development](#development) · [License](#license)
+
+**Current release:** [v1.5.0](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.0)
 
 ---
 
 ## Why?
 
-Configuring proxies is **tedious**. Every tool has its own config file, its own syntax, its own quirks. On remote Linux servers, you SSH in, edit `/etc/environment`, tweak APT configs, set Git globals, fiddle with Docker daemon settings… and on Windows, it's a different story altogether.
+Configuring proxies is tedious. Every tool has its own config file, syntax, and quirks. On remote Linux you SSH in, edit `/etc/environment`, tweak APT, set Git globals, fiddle with Docker… and on Windows it is a different story.
 
-**Proxy Switch** makes this painless. One app, one click — detect, enable, or disable proxies across 10 components on both Windows (local) and Ubuntu (remote via SSH).
+**Proxy Switch** makes this straightforward. Detect, enable, or disable proxies across **10 components** on Windows (local) and Ubuntu (remote via SSH).
 
 ---
 
 ## Features
 
-### 🌐 Remote (Ubuntu via SSH)
+### Remote (Ubuntu via SSH)
+
 | Component | Config Mechanism | Requires sudo |
 |---|---|---|
 | **System Proxy** | `/etc/environment` + `/etc/profile.d/proxy-switch.sh` | Yes |
@@ -24,43 +27,44 @@ Configuring proxies is **tedious**. Every tool has its own config file, its own 
 | **Git** | `git config --global` | No |
 | **Docker** | systemd drop-in + `daemon.json` (mirrors) | Yes |
 | **npm** | `npm config set` | No |
-| **Maven** | `~/.m2/settings.xml`（含阿里云镜像） | No |
+| **Maven** | `~/.m2/settings.xml` (Aliyun mirror supported) | No |
 
-### 🖥 Local (Windows)
+### Local (Windows)
+
 | Component | Config Mechanism |
 |---|---|
 | **Git** | `git config --global` |
-| **Docker** | Docker Desktop → Settings → Resources → Proxies（仅指引，不写配置） |
+| **Docker** | Docker Desktop → Settings → Resources → Proxies (**guide only**, never writes files) |
 | **npm** | `npm config set` |
-| **Maven** | `%USERPROFILE%\.m2\settings.xml`（含阿里云镜像） |
+| **Maven** | `%USERPROFILE%\.m2\settings.xml` (Aliyun mirror supported) |
 
 ### Core capabilities
-- **Auto-detect** — local components are detected on app launch; remote components are detected automatically when an SSH connection is established
-- **Per-component control** — each proxy is an independent card with its own settings; no batch profiles, no forced uniformity
-- **Manual setup guide** — every component includes a collapsible "How to configure manually" section showing the exact config files and commands, so you learn what's happening under the hood
-- **Mirror support** — APT, Docker, npm, and Maven support registry mirror URLs in addition to proxy addresses
-- **Toggle on/off** — enable or disable proxies per component, with instant status feedback
-- **Config file visibility** — each card shows exactly which config files it touches
+
+- **Auto-detect** — local components on launch; remote components when SSH connects
+- **Per-component control** — compact tiles in a grid; click opens a settings dialog
+- **Islands UI** — sidebar, workspace status, Remote, and Local each sit on their own rounded panel
+- **Manual setup guide** — every component shows the real files and commands
+- **Mirror support** — APT, Docker, npm, Maven
+- **Honest status** — `ON` / `OFF` / `N/A` (not installed) on each tile; full detail in the dialog
 
 ---
 
 ## Screenshot
 
 ```
- ┌─ Sidebar ─────┐  ┌─ Main Content ──────────────────────┐
- │                │  │                                      │
- │  ● dev-server  │  │  ● System Proxy  ENABLED  [▼]       │
- │    192.168...  │  │  ○ APT           disabled [▶]       │
- │    [断开]      │  │  ○ Git (Remote)  disabled [▶]       │
- │                │  │  ○ Docker        disabled [▶]       │
- │  [+ Add]       │  │  ○ npm           disabled [▶]       │
- │                │  │  ○ Maven         disabled [▶]       │
- │  ── Local ──── │  │                                      │
- │  ● This PC     │  │  ○ Git (Local)   disabled [▶]       │
- │                │  │  ○ Docker(Local) disabled [▶]       │
- │                │  │  ○ npm (Local)   disabled [▶]       │
- │                │  │  ○ Maven(Local)  disabled [▶]       │
- └────────────────┘  └──────────────────────────────────────┘
+ ┌─ Servers ──────┐  ┌─ Workspace ─────────────────────────────┐
+ │ Proxy Switch   │  │ Connected: dev-server                     │
+ │                │  ├─ Remote (Ubuntu via SSH) ───────────────┤
+ │ ● dev-server   │  │  ┌ System ┐ ┌ APT ┐ ┌ Git ┐ ┌ Docker ┐ │
+ │   192.168...   │  │  │  ON    │ │ OFF │ │ OFF │ │  OFF   │ │
+ │   [Disconnect] │  │  └────────┘ └─────┘ └─────┘ └────────┘ │
+ │                │  │  ┌ npm ┐ ┌ Maven ┐                      │
+ │ [+ Add Server] │  │  │ OFF │ │  OFF  │   ← click → dialog  │
+ │                │  │  └─────┘ └───────┘                      │
+ │ ── Local ───── │  ├─ Local (Windows) ───────────────────────┤
+ │ ● This PC      │  │  ┌ Git ┐ ┌ Docker ┐ ┌ npm ┐ ┌ Maven ┐  │
+ │   Windows      │  │  │ OFF │ │  N/A   │ │ OFF │ │  OFF  │  │
+ └────────────────┘  └─────────────────────────────────────────┘
 ```
 
 ---
@@ -69,13 +73,13 @@ Configuring proxies is **tedious**. Every tool has its own config file, its own 
 
 ### Download (Windows)
 
-Download the latest `.msi` or `.exe` installer from the [Releases](https://github.com/woyaoxuexi1231/proxy-switch/releases) page.
+Download the latest **NSIS** installer (`Proxy Switch_x.x.x_x64-setup.exe`) from the [Releases](https://github.com/woyaoxuexi1231/proxy-switch/releases) page.
 
 ### Prerequisites
 
-- **Windows 10+** (64-bit)
-- **Remote servers**: Ubuntu with SSH access (key-based or password authentication)
-- **sudo**: For System Proxy, APT, and Docker remote components, the remote user needs passwordless sudo (`NOPASSWD` in sudoers)
+- **Windows 10+** (64-bit) with WebView2 (included on recent Windows)
+- **Remote servers**: Ubuntu with SSH (key or password)
+- **sudo**: System Proxy, APT, and Docker remote need passwordless sudo (`NOPASSWD`) when those modules write root-owned files
 
 ---
 
@@ -83,29 +87,18 @@ Download the latest `.msi` or `.exe` installer from the [Releases](https://githu
 
 ### 1. Add a server
 
-Click **+ Add Server** in the sidebar, fill in your Ubuntu server's SSH details:
-
-- **Name** — a friendly label
-- **Host** — IP or hostname
-- **Port** — SSH port (default 22)
-- **User** — SSH user (default root)
-- **Auth** — SSH key (default) or password
+Click **+ Add Server**, then fill in SSH details (name, host, port, user, key or password).
 
 ### 2. Connect
 
-Click **Connect** on a server card. A green dot indicates a successful connection.
+Click **Connect** on a server card. A green status dot means the session is live.
 
 ### 3. Configure proxies
 
-Click any proxy card header to expand it. Each card shows:
-
-- **Status** — enabled/disabled/not installed/not checked
-- **Config files** — which files are affected
-- **Manual setup guide** — the underlying commands if you want to do it yourself
-- **Input fields** — HTTP proxy, HTTPS proxy, No Proxy, Mirror URL
-- **Actions** — Apply, Disable, Refresh
-
-Local components are auto-detected on launch. Remote components are auto-detected when you connect via SSH. No extra clicks needed.
+- **Local** tiles are ready on launch.
+- **Remote** tiles unlock after SSH connect; statuses load automatically.
+- Click a tile to open its **dialog**: status, config files, manual guide, proxy/mirror fields, Apply / Disable / Refresh.
+- Guide-only **Docker (Local)** never writes Docker Desktop files; the dialog shows the GUI steps instead.
 
 ---
 
@@ -121,20 +114,13 @@ Local components are auto-detected on launch. Remote components are auto-detecte
 │  │                  │  │                     │  │
 │  │  • Sidebar       │  │  • Server CRUD      │  │
 │  │  • ProxyCard     │  │  • SSH Connection   │  │
-│  │  • ServerDialog  │  │  • Connection Pool  │  │
-│  │  • ManualGuide   │  │  • Remote Proxy     │  │
-│  │  • StatusInd.    │  │  • Local Proxy      │  │
+│  │  • ProxyDialog   │  │  • Connection Pool  │  │
+│  │  • ServerDialog  │  │  • Remote Proxy     │  │
+│  │  • Island layout │  │  • Local Proxy      │  │
 │  └──────────────────┘  │  • Config Store     │  │
 │                         └─────────────────────┘  │
 │                                                 │
-│  Frontend ←→ invoke() ←→ Tauri Commands         │
-│                                                 │
-│  Rust Backend:                                   │
-│  • ssh2 — SSH client (libssh2)                  │
-│  • serde — Serialization                        │
-│  • toml — Config persistence                    │
-│  • regex — Config file parsing                  │
-│  • quick-xml — Maven settings.xml               │
+│  Frontend ←→ invoke.ts ←→ Tauri Commands        │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -142,79 +128,59 @@ Local components are auto-detected on launch. Remote components are auto-detecte
 
 | Layer | Technology |
 |---|---|
-| **Desktop Shell** | [Tauri 2.x](https://v2.tauri.app/) — ~5 MB bundle |
+| **Desktop Shell** | [Tauri 2.x](https://v2.tauri.app/) |
 | **Frontend** | React 18 + TypeScript + Vite |
+| **Styling** | Tailwind CSS v4 + Outfit / Noto Sans SC / Fira Code |
+| **Icons** | lucide-react |
 | **Backend** | Rust — SSH, file I/O, process execution |
 | **SSH** | [`ssh2`](https://crates.io/crates/ssh2) (libssh2) |
-| **Styling** | Hand-written CSS — zero UI dependencies |
-| **Config** | TOML files in `%APPDATA%\proxy-switch\` |
+| **Config** | TOML under `%APPDATA%\proxy-switch\` |
 
 ### Project Structure
 
 ```
 proxy-switch/
 ├── src/                          # TypeScript frontend
-│   ├── App.tsx                   # Root layout (sidebar + main + status bar)
-│   ├── App.css                   # CSS variables, reset, layout
+│   ├── App.tsx                   # Islands shell (sidebar + Remote + Local)
+│   ├── index.css                 # Tailwind + fonts
 │   ├── components/
-│   │   ├── Sidebar.tsx           # Server list + connection management
-│   │   ├── ProxyCard.tsx         # Per-component proxy card (expandable)
-│   │   ├── ServerDialog.tsx      # Add/edit server modal
-│   │   ├── StatusIndicator.tsx   # ●/○/⏭ status display
-│   │   └── ManualGuide.tsx       # Collapsible manual setup instructions
+│   │   ├── Sidebar.tsx           # Servers + connect / disconnect
+│   │   ├── ProxyCard.tsx         # Compact tile (opens dialog)
+│   │   ├── ProxyDialog.tsx       # Per-component settings modal
+│   │   ├── ServerDialog.tsx      # Add / edit server modal
+│   │   ├── Island.tsx            # Rounded panel wrapper
+│   │   ├── StatusIndicator.tsx   # Detailed status text
+│   │   └── ManualGuide.tsx       # Manual setup steps
 │   ├── hooks/
-│   │   ├── useProxyStatus.ts     # Proxy detection/enable/disable logic
-│   │   └── useSshConnection.ts   # SSH connection state management
-│   ├── types/index.ts            # Shared TypeScript type definitions
-│   └── utils/invoke.ts           # Typed Tauri invoke wrappers
+│   │   ├── useProxyStatus.ts     # Detect / enable / disable
+│   │   ├── useSshConnection.ts   # SSH + bulk detect
+│   │   └── useServers.ts         # Server list CRUD
+│   ├── types/index.ts            # Shared types + component lists
+│   └── utils/invoke.ts           # Typed Tauri IPC
 │
 ├── src-tauri/                    # Rust backend
-│   ├── Cargo.toml                # Rust dependencies
-│   ├── tauri.conf.json           # Tauri window/config/bundle settings
+│   ├── Cargo.toml
+│   ├── tauri.conf.json
 │   └── src/
-│       ├── main.rs               # Entry point
-│       ├── lib.rs                # Module registration + command export
-│       ├── models.rs             # Shared data types (Server, ProxyConfig, etc.)
-│       ├── commands/
-│       │   ├── server.rs         # CRUD commands for server config
-│       │   ├── ssh_cmd.rs        # SSH connect/disconnect/state
-│       │   ├── remote_proxy.rs   # Remote proxy detect/enable/disable
-│       │   └── local_proxy.rs    # Local proxy detect/enable/disable
-│       ├── ssh/
-│       │   └── connection.rs     # SSH session + connection pool
-│       ├── proxy/
-│       │   ├── mod.rs            # ProxyModule trait definition
-│       │   ├── remote/           # Ubuntu proxy modules
-│       │   │   ├── system_proxy.rs
-│       │   │   ├── apt.rs
-│       │   │   ├── git.rs
-│       │   │   ├── docker.rs
-│       │   │   ├── npm.rs
-│       │   │   └── maven.rs
-│       │   └── local/            # Windows proxy modules
-│       │       ├── git.rs
-│       │       ├── docker.rs
-│       │       ├── npm.rs
-│       │       └── maven.rs
-│       └── config/
-│           └── store.rs          # TOML-based config persistence
+│       ├── commands/             # Thin IPC handlers
+│       ├── ssh/                  # Session + connection pool
+│       ├── proxy/remote/         # Ubuntu modules
+│       ├── proxy/local/          # Windows modules
+│       └── config/store.rs       # servers.toml
 │
+├── docs/                         # Design + release notes
 ├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── docs/                         # Design, release, and engineering docs
+└── vite.config.ts
 ```
 
 ### How It Works
 
-1. **Local detection** — On Windows, the Rust backend spawns child processes (`git config --get`, `npm config get`, etc.) or reads config files (`settings.xml`) directly from the filesystem.
-2. **Remote detection** — Through an SSH session (managed by a connection pool), the backend executes commands on the remote Ubuntu server (`cat /etc/environment`, `git config --global --get`, `npm config get`, etc.) or reads files via SFTP/base64 piping.
-3. **Enabling/disabling** — For each component, the backend applies the appropriate configuration: writing files (SFTP for user-owned, base64 + `sudo tee` for root-owned), running CLI commands, or modifying XML/JSON configs.
-4. **Connection pool** — Only one SSH connection is active at a time (simplifies state management). The pool is protected by a `Mutex` for thread safety.
+1. **Local detection** — Rust runs tools (`git`, `npm`, …) or reads files (`settings.xml`, Docker Desktop settings) on Windows without flashing console windows.
+2. **Remote detection** — One SSH session in a connection pool; modules detect/status/enable/disable over that session. Heavy work uses `spawn_blocking` so the UI stays responsive.
+3. **Enabling / disabling** — Write user files via SFTP, or root files via base64 + `sudo tee` (parent dirs created when needed).
+4. **Single session** — Connecting replaces any previous SSH session.
 
 ### Plugin Architecture
-
-Every proxy component (local or remote) follows the same interface:
 
 ```rust
 pub trait ProxyModule {
@@ -227,7 +193,7 @@ pub trait ProxyModule {
 }
 ```
 
-To add a new component, you implement this trait and register it in the respective command handler. The frontend automatically picks it up by adding a new entry to `ComponentId`.
+Add a component by implementing the module, registering it in the command layer, and extending `ComponentId` / the frontend component lists together.
 
 ---
 
@@ -237,44 +203,38 @@ To add a new component, you implement this trait and register it in the respecti
 
 - [Node.js](https://nodejs.org/) 18+
 - [Rust](https://www.rust-lang.org/) 1.70+
-- [Tauri CLI](https://v2.tauri.app/start/prerequisites/) (`cargo install tauri-cli`)
+- [Tauri CLI](https://v2.tauri.app/start/prerequisites/)
 - Windows: [Microsoft Visual Studio C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 
 ### Setup
 
 ```bash
-# Clone the repo
 git clone https://github.com/woyaoxuexi1231/proxy-switch.git
 cd proxy-switch
-
-# Install frontend dependencies
 npm install
-
-# Run in development mode
 npm run tauri dev
-
-# Build for production
-npm run tauri build
 ```
 
 ### Commands
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start Vite dev server only |
-| `npm run build` | Type-check + build frontend |
-| `npm run tauri dev` | Full Tauri dev mode (hot reload) |
-| `npm run tauri build` | Production build → `.msi` / `.exe` |
+| `npm run dev` | Vite only |
+| `npm run build` | Type-check + frontend build |
+| `npm run tauri dev` | Full app with hot reload |
+| `npm run tauri build` | Release → NSIS installer under `src-tauri/target/release/bundle/nsis/` |
 
 ### Config File Location
-
-Server configurations are stored at:
 
 ```
 %APPDATA%\proxy-switch\servers.toml
 ```
 
-**⚠️ Note:** Passwords are currently stored in this TOML file. A future version will use Windows Credential Manager via the `keyring` crate for secure credential storage.
+**Note:** Passwords are currently stored in this TOML file. A future version may use Windows Credential Manager.
+
+### Releasing
+
+See [docs/发布文档.md](docs/发布文档.md). Pushing a `v*` tag (for example `v1.5.0`) triggers GitHub Actions to build and attach the Windows installer.
 
 ---
 
@@ -282,20 +242,20 @@ Server configurations are stored at:
 
 ### Why per-component instead of batch profiles?
 
-Each tool has different proxy needs — npm might use a registry mirror instead of a proxy, Docker needs systemd restarts, APT needs sudo. Treating each as an independent unit gives you full control and clear visibility.
+Each tool has different needs — npm may use a mirror, Docker needs restarts, APT needs sudo. Independent tiles keep status and ownership clear.
 
 ### Does it support macOS / Linux desktop?
 
-Currently Windows-only for the desktop app. The remote target is always Ubuntu (any Linux with the standard tools). macOS/Linux desktop support is planned for a future release.
+The app is **Windows-only** today. Remote targets are Ubuntu (or similar). Desktop support for other OSes is not shipped yet.
 
 ### What if a tool isn't installed?
 
-The card shows `⏭ NOT INSTALLED` with a gray indicator. The manual setup guide is still available so you know what to do once you install it.
+The tile shows **N/A**. The dialog still includes the manual guide for when you install the tool later.
 
-### What SSH authentication methods are supported?
+### What SSH auth methods are supported?
 
-- **SSH key** (default) — specify the path to your private key (supports `~` expansion)
-- **Password** — entered in the server dialog
+- **SSH key** (default) — path with `~` expansion
+- **Password** — set in the server dialog
 
 ---
 
@@ -306,7 +266,6 @@ The card shows `⏭ NOT INSTALLED` with a gray indicator. The manual setup guide
 - [ ] SSH key passphrase support
 - [ ] Connection keep-alive with auto-reconnect
 - [ ] Dark mode
-- [ ] CLI companion for headless automation
 
 ---
 
@@ -318,13 +277,4 @@ The card shows `⏭ NOT INSTALLED` with a gray indicator. The manual setup guide
 
 ## Acknowledgments
 
-Built with:
-- [Tauri](https://v2.tauri.app/) — the lightweight desktop framework
-- [ssh2](https://crates.io/crates/ssh2) — SSH for Rust
-- [React](https://react.dev/) — UI library
-
----
-
-<p align="center">
-  <sub>Made with ❤️ for developers tired of manually configuring proxies</sub>
-</p>
+Built with [Tauri](https://v2.tauri.app/), [ssh2](https://crates.io/crates/ssh2), and [React](https://react.dev/).
