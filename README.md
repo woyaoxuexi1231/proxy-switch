@@ -4,7 +4,7 @@
 
 [Features](#features) · [Installation](#installation) · [Usage](#usage) · [Architecture](#architecture) · [Development](#development) · [License](#license)
 
-**Current release:** [v1.5.0](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.0)
+**Current release:** [v1.5.1](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.1)
 
 ---
 
@@ -234,7 +234,7 @@ npm run tauri dev
 
 ### Releasing
 
-See [docs/发布文档.md](docs/发布文档.md). Pushing a `v*` tag (for example `v1.5.0`) triggers GitHub Actions to build and attach the Windows installer.
+See [docs/发布文档.md](docs/发布文档.md). Pushing a `v*` tag (for example `v1.5.1`) triggers GitHub Actions to build and attach the Windows installer.
 
 ---
 
