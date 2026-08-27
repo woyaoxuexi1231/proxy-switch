@@ -1,5 +1,11 @@
 # Proxy Switch
 
+## 简介 / Introduction
+
+**中文** — 桌面应用，从统一界面管理本地 Windows 与远端 Ubuntu（SSH）的代理与镜像设置。自动探测、逐组件地开启/关闭 System、APT、Git、Docker、npm、Maven 等 10 项；每个组件提供真实配置路径、手动接入指引与诚实的 ON/OFF/N/A 状态，免去逐份改配置的繁琐。
+
+**English** — A desktop app to manage proxy and mirror settings across local Windows and remote Ubuntu servers from one clean interface. It auto-detects and enables/disables 10 components (System, APT, Git, Docker, npm, Maven) per tile, with real config paths, manual-setup guides, and an honest ON/OFF/N/A status — removing the tedium of hand-editing each tool's config.
+
 > **A desktop app to manage proxy settings across local Windows and remote Ubuntu servers — from one clean interface.**
 
 [Features](#features) · [Installation](#installation) · [Usage](#usage) · [Architecture](#architecture) · [Development](#development) · [License](#license)
