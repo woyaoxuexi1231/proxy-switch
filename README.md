@@ -10,7 +10,7 @@
 
 [Features](#features) · [Installation](#installation) · [Usage](#usage) · [Architecture](#architecture) · [Development](#development) · [License](#license)
 
-**Current release:** [v1.5.1](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.1)
+**Current release:** [v1.5.2](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.2)
 
 ---
 
@@ -211,6 +211,7 @@ Add a component by implementing the module, registering it in the command layer,
 - [Rust](https://www.rust-lang.org/) 1.70+
 - [Tauri CLI](https://v2.tauri.app/start/prerequisites/)
 - Windows: [Microsoft Visual Studio C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+- Windows: [Strawberry Perl](https://strawberryperl.com/) + [NASM](https://www.nasm.us/) — required by `ssh2`'s `vendored-openssl` feature, which compiles libssh2 and OpenSSL from source. If you already have vcpkg with `openssl:x64-windows-static`, you can switch the feature to `openssl-on-win32` in `src-tauri/Cargo.toml` and skip Perl/NASM.
 
 ### Setup
 
@@ -262,6 +263,15 @@ The tile shows **N/A**. The dialog still includes the manual guide for when you 
 
 - **SSH key** (default) — path with `~` expansion
 - **Password** — set in the server dialog
+
+### Connection fails with `[Session(-5)] Unable to exchange encryption keys`?
+
+TCP connects fine but the key exchange (KEX) finds no algorithm shared with the server. Two things to check:
+
+1. The port is really an SSH port (`nc -zv <host> <port>` from the client, or `sshd -T | grep -E 'kexalgorithms|hostkeyalgorithms'` on the server). A proxy or HTTP port that answers with a non-SSH banner produces exactly this error.
+2. The client build links libssh2 against a crypto backend that supports modern algorithms (`curve25519-sha256`, `ssh-ed25519`, `rsa-sha2-256`). The `vendored-openssl` feature in `src-tauri/Cargo.toml` guarantees this; the Windows default backend (WinCNG) does not.
+
+On the server side, `sudo tail -f /var/log/auth.log` during a connection attempt shows whether `sshd` accepted the transport at all.
 
 ---
 

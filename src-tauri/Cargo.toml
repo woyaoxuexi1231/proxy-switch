@@ -1,6 +1,6 @@
 [package]
 name = "proxy-switch"
-version = "1.5.1"
+version = "1.5.2"
 edition = "2021"
 
 [dependencies]
@@ -9,7 +9,13 @@ tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
-ssh2 = "0.9"
+# 必须开启 OpenSSL 后端。
+# Windows 上 libssh2 默认使用 WinCNG（BCrypt/Crypt32），不支持 curve25519-sha256、
+# ssh-ed25519、ecdsa、rsa-sha2 等现代算法，连接 OpenSSH 7.4+ / Ubuntu 22.04+
+# 时会在握手阶段报 [Session(-5)] Unable to exchange encryption keys。
+# vendored-openssl = 源码编译 libssh2 + OpenSSL，自带全部现代算法，也免去 vcpkg 依赖。
+# 若本机已装 vcpkg 的 openssl:x64-windows-static，可改为 features = ["openssl-on-win32"]。
+ssh2 = { version = "0.9", features = ["vendored-openssl"] }
 thiserror = "2"
 dirs = "6"
 regex = "1"

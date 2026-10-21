@@ -1,9 +1,33 @@
 use crate::models::{AuthMode, Server};
-use ssh2::Session;
+use ssh2::{MethodType, Session};
 use std::io::Read;
 use std::net::TcpStream;
 use std::sync::Mutex;
 use std::time::Duration;
+
+/// 握手阶段的超时（毫秒）。握手完成后会恢复为 0（无限等待），
+/// 以免影响 apt / git clone 这类长耗时命令。
+const HANDSHAKE_TIMEOUT_MS: u32 = 15_000;
+
+/// 密钥交换算法，按优先级从高到低排列。
+/// 现代 OpenSSH(7.4+) 默认只提供 curve25519 / sntrup761x25519 / group16-sha512，
+/// 客户端若一条都提供不出来，握手会直接以 KEX_FAILURE(-5) 失败。
+const KEX_ALGORITHMS: &str = concat!(
+    "curve25519-sha256,curve25519-sha256@libssh.org,",
+    "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,",
+    "diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha256,",
+    "diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,",
+    "diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1"
+);
+
+/// 主机密钥算法，按优先级从高到低排列。
+/// Ubuntu 22.04+ 默认只生成 ssh-ed25519 / rsa-sha2 主机密钥，
+/// 不支持这些类型的客户端同样会在 KEX 阶段被拒。
+const HOSTKEY_ALGORITHMS: &str = concat!(
+    "ssh-ed25519,rsa-sha2-512,rsa-sha2-256,",
+    "ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,",
+    "ssh-rsa,ssh-dss"
+);
 
 pub struct SshSession {
     pub session: Session,
@@ -36,9 +60,28 @@ impl SshSession {
 
         let mut session = Session::new().map_err(|e| format!("Failed to create SSH session: {}", e))?;
         session.set_tcp_stream(tcp);
-        session
-            .handshake()
-            .map_err(|e| format!("SSH handshake failed: {}", e))?;
+        session.set_timeout(HANDSHAKE_TIMEOUT_MS);
+
+        // 显式声明算法优先级：列表里当前加密后端不支持的算法会被 libssh2 忽略，
+        // 全部不支持时自动回退到默认算法集，因此这里无副作用。
+        let _ = session.method_pref(MethodType::Kex, KEX_ALGORITHMS);
+        let _ = session.method_pref(MethodType::HostKey, HOSTKEY_ALGORITHMS);
+
+        session.handshake().map_err(|e| {
+            // -5 = LIBSSH2_ERROR_KEX_FAILURE，客户端与服务器没有共同可用的算法。
+            if let ssh2::ErrorCode::Session(-5) = e.code() {
+                format!(
+                    "SSH handshake failed: {} — no common KEX/HostKey algorithm with the server. \
+                     Verify the port is really SSH and the server offers curve25519-sha256, \
+                     ecdh-sha2-nistp256, rsa-sha2-256 or ssh-rsa",
+                    e
+                )
+            } else {
+                format!("SSH handshake failed: {}", e)
+            }
+        })?;
+        // 握手已完成，后续命令不设上限，避免长耗时操作被误判超时。
+        session.set_timeout(0);
 
         match &server.auth_mode {
             AuthMode::Key => {
