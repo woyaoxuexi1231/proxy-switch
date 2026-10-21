@@ -1,5 +1,5 @@
 use crate::models::{AuthMode, Server};
-use ssh2::{MethodType, Session};
+use ssh2::Session;
 use std::io::Read;
 use std::net::TcpStream;
 use std::sync::Mutex;
@@ -9,25 +9,9 @@ use std::time::Duration;
 /// 以免影响 apt / git clone 这类长耗时命令。
 const HANDSHAKE_TIMEOUT_MS: u32 = 15_000;
 
-/// 密钥交换算法，按优先级从高到低排列。
-/// 现代 OpenSSH(7.4+) 默认只提供 curve25519 / sntrup761x25519 / group16-sha512，
-/// 客户端若一条都提供不出来，握手会直接以 KEX_FAILURE(-5) 失败。
-const KEX_ALGORITHMS: &str = concat!(
-    "curve25519-sha256,curve25519-sha256@libssh.org,",
-    "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,",
-    "diffie-hellman-group-exchange-sha256,diffie-hellman-group14-sha256,",
-    "diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,",
-    "diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1"
-);
-
-/// 主机密钥算法，按优先级从高到低排列。
-/// Ubuntu 22.04+ 默认只生成 ssh-ed25519 / rsa-sha2 主机密钥，
-/// 不支持这些类型的客户端同样会在 KEX 阶段被拒。
-const HOSTKEY_ALGORITHMS: &str = concat!(
-    "ssh-ed25519,rsa-sha2-512,rsa-sha2-256,",
-    "ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,",
-    "ssh-rsa,ssh-dss"
-);
+/// 等待对端 banner 的时间。OpenSSH 在 accept 后会立即发送 banner，
+/// 正常情况下瞬间就能读到；超时说明对端大概率不是 SSH 服务。
+const BANNER_PEEK_TIMEOUT: Duration = Duration::from_secs(3);
 
 pub struct SshSession {
     pub session: Session,
@@ -58,27 +42,25 @@ impl SshSession {
         tcp.set_read_timeout(Some(Duration::from_secs(30)))
             .map_err(|e| format!("Failed to set timeout: {}", e))?;
 
+        // 先偷看一眼对端 banner（peek 不消费数据，libssh2 稍后照常读取），
+        // 握手失败时能据此判断对端到底是不是 SSH 服务、是什么版本。
+        let server_banner = peek_server_banner(&tcp);
+
         let mut session = Session::new().map_err(|e| format!("Failed to create SSH session: {}", e))?;
         session.set_tcp_stream(tcp);
         session.set_timeout(HANDSHAKE_TIMEOUT_MS);
 
-        // 显式声明算法优先级：列表里当前加密后端不支持的算法会被 libssh2 忽略，
-        // 全部不支持时自动回退到默认算法集，因此这里无副作用。
-        let _ = session.method_pref(MethodType::Kex, KEX_ALGORITHMS);
-        let _ = session.method_pref(MethodType::HostKey, HOSTKEY_ALGORITHMS);
-
+        // 算法清单交给 libssh2 默认值（OpenSSL 后端下包含 curve25519 / ed25519 / ecdsa /
+        // rsa-sha2 全套现代算法），不做人为收窄，以保证与服务端的最大交集。
         session.handshake().map_err(|e| {
-            // -5 = LIBSSH2_ERROR_KEX_FAILURE，客户端与服务器没有共同可用的算法。
-            if let ssh2::ErrorCode::Session(-5) = e.code() {
-                format!(
-                    "SSH handshake failed: {} — no common KEX/HostKey algorithm with the server. \
-                     Verify the port is really SSH and the server offers curve25519-sha256, \
-                     ecdh-sha2-nistp256, rsa-sha2-256 or ssh-rsa",
-                    e
-                )
+            let hint = if server_banner.is_empty() {
+                "the remote sent no banner within 3s — this port is probably not an SSH service, \
+                 double-check the host and port"
+                    .to_string()
             } else {
-                format!("SSH handshake failed: {}", e)
-            }
+                format!("remote banner: \"{}\"", server_banner)
+            };
+            format!("SSH handshake failed: {} ({})", e, hint)
         })?;
         // 握手已完成，后续命令不设上限，避免长耗时操作被误判超时。
         session.set_timeout(0);
@@ -216,6 +198,26 @@ impl SshSession {
 
     pub fn ensure_connected(&self) -> bool {
         self.session.authenticated()
+    }
+}
+
+// ── Banner probe ────────────────────────────────────────────────────────────
+
+/// 在不消费数据的前提下读取对端返回的第一行 banner。
+/// 失败或超时返回空串，不影响后续握手。
+fn peek_server_banner(tcp: &TcpStream) -> String {
+    let prev_timeout = tcp.read_timeout().ok().flatten();
+    let _ = tcp.set_read_timeout(Some(BANNER_PEEK_TIMEOUT));
+    let mut buf = [0u8; 256];
+    let result = tcp.peek(&mut buf);
+    let _ = tcp.set_read_timeout(prev_timeout);
+
+    match result {
+        Ok(n) if n > 0 => {
+            let text = String::from_utf8_lossy(&buf[..n]).into_owned();
+            text.lines().next().unwrap_or("").trim_end().to_string()
+        }
+        _ => String::new(),
     }
 }
 

@@ -10,7 +10,7 @@
 
 [Features](#features) · [Installation](#installation) · [Usage](#usage) · [Architecture](#architecture) · [Development](#development) · [License](#license)
 
-**Current release:** [v1.5.2](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.2)
+**Current release:** [v1.5.3](https://github.com/woyaoxuexi1231/proxy-switch/releases/tag/v1.5.3)
 
 ---
 
@@ -211,7 +211,7 @@ Add a component by implementing the module, registering it in the command layer,
 - [Rust](https://www.rust-lang.org/) 1.70+
 - [Tauri CLI](https://v2.tauri.app/start/prerequisites/)
 - Windows: [Microsoft Visual Studio C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-- Windows: [Strawberry Perl](https://strawberryperl.com/) + [NASM](https://www.nasm.us/) — required by `ssh2`'s `vendored-openssl` feature, which compiles libssh2 and OpenSSL from source. If you already have vcpkg with `openssl:x64-windows-static`, you can switch the feature to `openssl-on-win32` in `src-tauri/Cargo.toml` and skip Perl/NASM.
+- Windows: [Strawberry Perl](https://strawberryperl.com/) + [NASM](https://www.nasm.us/) — `ssh2` is built with `openssl-on-win32` (switches libssh2 to the OpenSSL crypto backend; the Windows default WinCNG lacks curve25519/ed25519 and fails handshakes against OpenSSH 7.4+) plus `vendored-openssl` (compiles OpenSSL from source, no vcpkg needed). If you already have vcpkg's `openssl:x64-windows-static`, you can drop `vendored-openssl` and skip Perl/NASM.
 
 ### Setup
 
@@ -269,7 +269,7 @@ The tile shows **N/A**. The dialog still includes the manual guide for when you 
 TCP connects fine but the key exchange (KEX) finds no algorithm shared with the server. Two things to check:
 
 1. The port is really an SSH port (`nc -zv <host> <port>` from the client, or `sshd -T | grep -E 'kexalgorithms|hostkeyalgorithms'` on the server). A proxy or HTTP port that answers with a non-SSH banner produces exactly this error.
-2. The client build links libssh2 against a crypto backend that supports modern algorithms (`curve25519-sha256`, `ssh-ed25519`, `rsa-sha2-256`). The `vendored-openssl` feature in `src-tauri/Cargo.toml` guarantees this; the Windows default backend (WinCNG) does not.
+2. The client build must link libssh2 against a crypto backend that supports modern algorithms (`curve25519-sha256`, `ssh-ed25519`, `rsa-sha2-256`). On Windows this needs the `openssl-on-win32` feature in `src-tauri/Cargo.toml` — `vendored-openssl` alone only compiles OpenSSL but leaves libssh2 on the WinCNG backend, which supports none of them.
 
 On the server side, `sudo tail -f /var/log/auth.log` during a connection attempt shows whether `sshd` accepted the transport at all.
 
