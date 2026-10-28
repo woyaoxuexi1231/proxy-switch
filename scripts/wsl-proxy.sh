@@ -12,8 +12,8 @@
 #   sudo ./scripts/wsl-proxy.sh uninstall   卸载
 #   ./scripts/wsl-proxy.sh status           查看安装、开关、连通性
 #   ./scripts/wsl-proxy.sh show             只打印将要安装的 profile 内容
-#   ./scripts/wsl-proxy.sh on               开启（新终端生效）
-#   ./scripts/wsl-proxy.sh off              暂停（新终端不再加载）
+#   ./scripts/wsl-proxy.sh on               开启（只影响新终端）
+#   ./scripts/wsl-proxy.sh off              暂停（只影响新终端）
 #
 # 安装后在任何交互终端里可直接使用：
 #   proxyon       开启代理（立即生效）
@@ -50,11 +50,17 @@ wsl-proxy.sh — 让 WSL 使用 Windows 宿主机代理
   sudo ./scripts/wsl-proxy.sh uninstall   卸载并清理 ~/.bashrc 中的加载行
   ./scripts/wsl-proxy.sh status           查看安装状态、开关、网关与连通性
   ./scripts/wsl-proxy.sh show             只打印将要安装的 profile 内容
-  ./scripts/wsl-proxy.sh on               开启（新终端生效；当前终端用 proxyon）
-  ./scripts/wsl-proxy.sh off              暂停（新终端不再加载；当前终端用 proxyoff）
+  ./scripts/wsl-proxy.sh on               开启（只影响新终端；当前终端需 source）
+  ./scripts/wsl-proxy.sh off              暂停（只影响新终端；当前终端需 source）
 
 安装后可用命令:
   proxyon / proxyoff / proxystatus
+
+注意:
+  这些是 shell 函数，只在「加载过 profile 的终端」里存在：
+  新终端自动加载；已打开的终端需要执行
+      . /etc/profile.d/proxy-switch.sh
+  或重新打开终端才会生效。on/off 也只影响新终端。
 
 前提:
   Windows 端代理客户端需开启「允许局域网连接 / Allow LAN」，
@@ -187,7 +193,7 @@ ensure_bashrc() {
         echo "$MARKER"
         echo "[ -f $PROFILE_FILE ] && . $PROFILE_FILE"
     } >> "$BASHRC"
-    echo "已向 $BASHRC 追加加载行"
+    echo "已向 $BASHRC 追加加载行（新终端启动时自动加载）"
 }
 
 cmd_install() {
@@ -210,8 +216,15 @@ cmd_install() {
     ensure_bashrc
     echo ""
     echo "安装完成：$PROFILE_FILE"
-    echo "当前终端执行：. $PROFILE_FILE   （或新开终端自动生效）"
-    echo "之后可用：proxyon / proxyoff / proxystatus"
+    echo ""
+    echo "生效方式："
+    echo "  新开的终端      ：自动加载，无需任何操作"
+    echo "  已打开的终端    ：不会自动生效，请执行"
+    echo "      . $PROFILE_FILE"
+    echo "  然后可用        ：proxyon / proxyoff / proxystatus"
+    echo ""
+    echo "说明：proxyon 等是 shell 函数，不是可执行命令，"
+    echo "      只存在于加载过 $PROFILE_FILE 的终端里。"
 }
 
 cmd_uninstall() {
@@ -252,7 +265,16 @@ cmd_status() {
     fi
     echo "当前环境: ${http_proxy:-<未设置>}"
     echo ""
-    echo "提示: 已安装后，交互终端里可用 proxyon / proxyoff / proxystatus"
+
+    if [ -f "$PROFILE_FILE" ]; then
+        echo "提示: 新终端会自动加载；当前终端若提示 proxyon 不存在，请执行"
+        echo "      . $PROFILE_FILE"
+        if [ -n "${http_proxy:-}" ] && [ -n "$GATEWAY" ] && [ "$http_proxy" != "http://$GATEWAY:$PORT" ]; then
+            echo "      当前值与网关不一致，可能是旧终端残留的变量。"
+        fi
+    else
+        echo "提示: 尚未安装，请执行：sudo $0 install"
+    fi
 }
 
 port_open() {
@@ -262,12 +284,14 @@ port_open() {
 cmd_on() {
     [ -f "$PROFILE_FILE" ] || { echo "尚未安装，请先执行：sudo $0 install" >&2; exit 1; }
     rm -f "$FLAG_FILE"
-    echo "已开启（新终端生效）。当前终端请执行：proxyon"
+    echo "已开启：新终端自动加载代理。"
+    echo "已打开的终端不会自动变化，请执行：. $PROFILE_FILE"
 }
 
 cmd_off() {
     : > "$FLAG_FILE"
-    echo "已暂停（新终端不再加载）。当前终端请执行：proxyoff"
+    echo "已暂停：新终端不再加载代理。"
+    echo "已打开的终端仍有代理变量，请执行：. $PROFILE_FILE"
 }
 
 case "${1:-status}" in
