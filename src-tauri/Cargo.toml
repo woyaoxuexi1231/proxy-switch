@@ -1,6 +1,6 @@
 [package]
 name = "proxy-switch"
-version = "1.5.1"
+version = "1.5.3"
 edition = "2021"
 
 [dependencies]
@@ -9,7 +9,13 @@ tauri-plugin-shell = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
-ssh2 = "0.9"
+# Windows 上这两个 feature 必须同时开，缺一不可：
+#   openssl-on-win32 —— libssh2-sys 的 build.rs 只有在它启用时才定义 LIBSSH2_OPENSSL，
+#                       否则 Windows 默认编译成 WinCNG 后端（不支持 curve25519 / ssh-ed25519 /
+#                       ecdsa / rsa-sha2，握手必然报 [Session(-5)] Unable to exchange keys）。
+#   vendored-openssl —— 从源码编译 OpenSSL 供其静态链接，无需 vcpkg。
+# 若本机已装 vcpkg 的 openssl:x64-windows-static，可去掉 vendored-openssl。
+ssh2 = { version = "0.9", features = ["openssl-on-win32", "vendored-openssl"] }
 thiserror = "2"
 dirs = "6"
 regex = "1"
