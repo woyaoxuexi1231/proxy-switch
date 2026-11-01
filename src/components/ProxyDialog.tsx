@@ -234,7 +234,7 @@ export function ProxyDialog({
                 <Field
                   label="No Proxy"
                   value={noProxy}
-                  placeholder="localhost,127.0.0.1,::1"
+                  placeholder="127.0.0.1,127.0.0.1,::1"
                   onChange={setNoProxy}
                 />
               </div>

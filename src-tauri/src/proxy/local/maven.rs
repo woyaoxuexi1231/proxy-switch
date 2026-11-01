@@ -27,7 +27,7 @@ impl MavenLocalModule {
                     "    <protocol>http</protocol>".into(),
                     "    <host>your-proxy-host</host>".into(),
                     "    <port>7890</port>".into(),
-                    "    <nonProxyHosts>localhost|127.0.0.1</nonProxyHosts>".into(),
+                    "    <nonProxyHosts>127.0.0.1|127.0.0.1</nonProxyHosts>".into(),
                     "  </proxy>".into(),
                     "</proxies>".into(),
                 ],

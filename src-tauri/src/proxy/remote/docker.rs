@@ -23,7 +23,7 @@ impl ProxyModule for DockerRemoteModule {
                 "[Service]".into(),
                 "Environment=\"HTTP_PROXY=http://your-proxy:port\"".into(),
                 "Environment=\"HTTPS_PROXY=http://your-proxy:port\"".into(),
-                "Environment=\"NO_PROXY=localhost,127.0.0.1\"".into(),
+                "Environment=\"NO_PROXY=127.0.0.1,127.0.0.1\"".into(),
                 String::new(),
                 "# Then restart:".to_string(),
                 "sudo systemctl daemon-reload".into(),
