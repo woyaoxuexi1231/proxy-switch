@@ -1,5 +1,7 @@
 # Proxy-Switch v1.0 — 重写设计文档
 
+> 说明:文中出现的局域网 IP 为实验环境真机地址或示例拓扑(数据),非本机回环,请勿改成 127.0.0.1。
+
 ## 一、项目概述
 
 将现有的 Python + tkinter 实现的 proxy-switch 工具，使用 **Rust + TypeScript (Tauri 2.x)** 完全重写。保留核心能力（SSH 远程配置 Ubuntu 代理），新增 Windows 本地代理检测与配置，彻底重构 UI 交互模式。
@@ -304,7 +306,7 @@ export interface SshState {
 │            │  │                                        ││
 │  [+ 添加]  │  │ HTTP Proxy  [http://127.0.0.1:7890   ] ││
 │            │  │ HTTPS Proxy [http://127.0.0.1:7890   ] ││
-│            │  │ No Proxy    [localhost,127.0.0.1     ] ││
+│            │  │ No Proxy    [127.0.0.1,127.0.0.1     ] ││
 │            │  │                                        ││
 │  ────────  │  │ [Apply]  [Disable]  [↻ Refresh]        ││
 │            │  └────────────────────────────────────────┘│
@@ -442,7 +444,7 @@ App
 │  │                                                    │  │
 │  │ No Proxy (不代理的地址)                              │  │
 │  │ ┌──────────────────────────────────────────────────┐│  │
-│  │ │ localhost,127.0.0.1,::1                          ││  │
+│  │ │ 127.0.0.1,127.0.0.1,::1                          ││  │
 │  │ └──────────────────────────────────────────────────┘│  │
 │  │                                                    │  │
 │  └────────────────────────────────────────────────────┘  │
@@ -797,7 +799,7 @@ pub trait ProxyModule {
     "default": {
       "httpProxy": "http://127.0.0.1:7890",
       "httpsProxy": "http://127.0.0.1:7890",
-      "noProxy": "localhost,127.0.0.1"
+      "noProxy": "127.0.0.1,127.0.0.1"
     }
   }
 }
@@ -940,13 +942,13 @@ impl ConfigStore {
   https_proxy="http://your-proxy:port"
   HTTP_PROXY="http://your-proxy:port"
   HTTPS_PROXY="http://your-proxy:port"
-  no_proxy="localhost,127.0.0.1,::1"
-  NO_PROXY="localhost,127.0.0.1,::1"
+  no_proxy="127.0.0.1,127.0.0.1,::1"
+  NO_PROXY="127.0.0.1,127.0.0.1,::1"
 
 或创建 /etc/profile.d/proxy-switch.sh，添加：
   export http_proxy="http://your-proxy:port"
   export https_proxy="http://your-proxy:port"
-  export no_proxy="localhost,127.0.0.1,::1"
+  export no_proxy="127.0.0.1,127.0.0.1,::1"
 
 生效方式：
   source /etc/profile.d/proxy-switch.sh
@@ -977,7 +979,7 @@ git config --global --unset https.proxy
   [Service]
   Environment="HTTP_PROXY=http://your-proxy:port"
   Environment="HTTPS_PROXY=http://your-proxy:port"
-  Environment="NO_PROXY=localhost,127.0.0.1"
+  Environment="NO_PROXY=127.0.0.1,127.0.0.1"
 
 然后执行：
   sudo systemctl daemon-reload
@@ -1003,7 +1005,7 @@ npm config delete https-proxy
     <protocol>http</protocol>
     <host>your-proxy-host</host>
     <port>7890</port>
-    <nonProxyHosts>localhost|127.0.0.1</nonProxyHosts>
+    <nonProxyHosts>127.0.0.1|127.0.0.1</nonProxyHosts>
   </proxy>
 ```
 
@@ -1028,7 +1030,7 @@ git config --global --unset https.proxy
       "default": {
         "httpProxy": "http://your-proxy:port",
         "httpsProxy": "http://your-proxy:port",
-        "noProxy": "localhost,127.0.0.1"
+        "noProxy": "127.0.0.1,127.0.0.1"
       }
     }
   }

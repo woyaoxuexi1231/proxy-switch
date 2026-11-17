@@ -94,7 +94,7 @@ pub fn apply(existing: &str, config: &ProxyConfig) -> Result<String, String> {
         let mut non_proxy = config.no_proxy.replace(',', "|");
         non_proxy.retain(|c| !c.is_whitespace());
         if non_proxy.is_empty() {
-            non_proxy = "localhost|127.0.0.1".into();
+            non_proxy = "127.0.0.1|127.0.0.1".into();
         }
         xml = upsert_proxy(&xml, &host, &port, &non_proxy);
     }

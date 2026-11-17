@@ -1,3 +1,4 @@
+// 说明:本文件中出现的局域网地址是多机实验拓扑/真实设备的数据地址,不是服务监听地址,请勿改成 127.0.0.1
 import { useState, useEffect } from 'react';
 import { addServer, updateServer } from '../utils/invoke';
 import type { Server, ServerInput } from '../types';
